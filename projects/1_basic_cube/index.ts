@@ -95,15 +95,15 @@ const renderCube = () => {
 
     const projectionMatrix = m4.perspective(degToRad(60), gl.canvas.clientWidth / gl.canvas.clientHeight, 1, 2000);
 
-    const cameraPosition: v3 = [0, 0, 200];
+    const cameraPosition: v3 = [0, 0, 20];
     const up: v3 = [0, 1, 0];
     const target: v3 = [0, 0, 0];
 
-    const viewMatrix = m4.lookAt(cameraPosition, target, up);
+    const cameraMatrix = m4.lookAt(cameraPosition, target, up);
+    const viewMatrix = m4.inverse(cameraMatrix);
 
     const viewProjectionMatrix = m4.multiply(projectionMatrix, viewMatrix);
 
-    // Set the matri
     gl.useProgram(program);
     gl.uniformMatrix4fv(matrixUniformLocation, false, viewProjectionMatrix.flat());
 
@@ -118,6 +118,8 @@ const renderCube = () => {
         gl.drawArrays(gl.TRIANGLES, 0, cubeMesh.positions.length / 3);
 
         requestAnimationFrame(drawScene);
+
+        console.table (viewProjectionMatrix.flat());
     };
 
     requestAnimationFrame(drawScene);

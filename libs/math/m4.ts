@@ -57,7 +57,7 @@ export namespace m4 {
         ],
     ];
 
-    export const inverse = (m: m4) => {
+    export const inverse = (m: m4): m4  => {
         const t00 = m[2][2] * m[3][3];
         const t01 = m[3][2] * m[2][3];
         const t02 = m[1][2] * m[3][3];
@@ -115,9 +115,9 @@ export namespace m4 {
         const m33 = (t22 * m[2][2] + t16 * m[0][2] + t21 * m[1][2]) -
             (t20 * m[1][2] + t23 * m[2][2] + t17 * m[0][2]);
         const det = m[0][0] * m00 + m[1][0] * m01 + m[2][0] * m02 + m[3][0] * m03;
-        if (det === 0) {
-            return null;
-        }
+        // if (det === 0) {
+        //     return null;
+        // }
         return [
             [m00 / det, m10 / det, m20 / det, m30 / det],
             [m01 / det, m11 / det, m21 / det, m31 / det],
