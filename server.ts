@@ -3,7 +3,7 @@ import http from 'http';
 import path from 'path';
 import webpack from 'webpack';
 import fs from 'fs';
-import { projects } from './projects/hub/projects';
+import { projects } from './libs/templates/navbar';
 
 // Ensure that a temp folder exists to webpack into before serving.
 const tempFolder = path.resolve(__dirname, 'temp');
@@ -44,6 +44,12 @@ const stubHTML = (scriptContents: string) => `
     <head>
         <meta charset="utf-8">
         <title>Hub</title>
+        <style>
+            body {
+                background-color: #1e1e1e;
+                color: #d4d4d4;
+            }
+        </style>
     </head>
     <body>
         <script>${scriptContents}</script>

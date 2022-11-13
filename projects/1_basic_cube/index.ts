@@ -1,12 +1,18 @@
 import { degToRad } from "../../libs/math/basic";
 import { m4 } from "../../libs/math/m4";
 import { v3 } from "../../libs/math/v3";
-import { initDocumentDarkMode } from "../../libs/templates/darkMode";
+import { setDarkMode } from "../../libs/templates/darkMode";
+import { navbar } from "../../libs/templates/navbar";
 import { renderDemo } from "../../libs/templates/renderDemo";
+import { pipe } from "../../libs/utils";
 import { cubeMesh } from "./cubeMesh";
 
+pipe(document.body)
+    .into(setDarkMode)
+    .into(navbar);
+
 const renderCube = () => {
-    initDocumentDarkMode();
+
     const renderDemoElements = renderDemo(document.body);
     const gl = renderDemoElements.canvas.getContext("webgl2");
     if (gl == null)
@@ -118,8 +124,6 @@ const renderCube = () => {
         gl.drawArrays(gl.TRIANGLES, 0, cubeMesh.positions.length / 3);
 
         requestAnimationFrame(drawScene);
-
-        console.table (viewProjectionMatrix.flat());
     };
 
     requestAnimationFrame(drawScene);
