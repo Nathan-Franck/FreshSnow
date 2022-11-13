@@ -1,5 +1,7 @@
 import { HtmlBuilder } from "../../libs/rendering/htmlBuilder";
 import { ReactiveModel } from "../../libs/store/reactiveModel";
+import { fromEntries, map, pipe, toEntries } from "../../libs/utils";
+import { projects } from "./projects";
 
 // Dark mode.
 HtmlBuilder.assignToElement(document.body, {
@@ -8,6 +10,12 @@ HtmlBuilder.assignToElement(document.body, {
         color: "#d4d4d4",
     },
 });
+
+// Take Project directory and display all buttons.
+HtmlBuilder.createChildren(document.body, pipe(projects)
+    .into(toEntries)
+    .into(map(([name, _]) => <const>([name, { type: "button", attributes: { innerHTML: name } }])))
+    .outFrom(fromEntries));
 
 // Basic test of reactivity on UI.
 const thinger = HtmlBuilder.createChildren(document.body, {

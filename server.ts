@@ -3,13 +3,14 @@ import http from 'http';
 import path from 'path';
 import webpack from 'webpack';
 import fs from 'fs';
+import { projects } from './projects/hub/projects';
 
-// ensure that a temp folder exists to webpack into before serving
+// Ensure that a temp folder exists to webpack into before serving.
 const tempFolder = path.resolve(__dirname, 'temp');
 fs.mkdirSync(tempFolder, { recursive: true });
 
+// Define the server - we will use this to serve the webpack bundle.
 const server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/html' });
     if (req.url != null) {
         const projectName = req.url.replace('/', '') as keyof typeof projects;
         console.log(`Request for ${req.url}`);
@@ -28,12 +29,15 @@ const server = http.createServer((req, res) => {
                     console.log(err);
                 if (stats)
                     console.log(stats.toString());
+                res.writeHead(200, { 'Content-Type': 'text/html' });
                 res.write(stubHTML(fs.readFileSync(path.resolve(tempFolder, webpackOutputName), 'utf8')));
+                res.end();
             });
         }
     }
 });
 
+// Wrap the output of the webpack bundle in a stub HTML file.
 const stubHTML = (scriptContents: string) => `
 <!DOCTYPE html>
 <html>
@@ -47,10 +51,7 @@ const stubHTML = (scriptContents: string) => `
 </html>
 `;
 
-const projects = <const>{
-    'hub': true,
-};
-
+// Start the server.
 server.listen(8080, () => {
     console.log('Server running at http://localhost:8080/');
 });
