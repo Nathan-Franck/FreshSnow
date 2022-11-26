@@ -5,11 +5,12 @@ import { fromEntries, map, pipe, toEntries } from "../utils";
 export const projects = <const>{
     'hub': true,
     '1_basic_cube': true,
+    '2_pole_connector_builder': true,
 };
 
 export const navbar = (parent: HTMLElement) => {
     // Take Project directory and display all buttons.
-    const navigationButtons = HtmlBuilder.createChildren(document.body, pipe(projects)
+    const navigationButtons = HtmlBuilder.createChildren(parent, pipe(projects)
         .into(toEntries)
         .into(map(([name, _]) => <const>([name, { type: "button", attributes: { innerHTML: name } }])))
         .outFrom(fromEntries));

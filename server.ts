@@ -11,11 +11,15 @@ fs.mkdirSync(tempFolder, { recursive: true });
 
 // Define the server - we will use this to serve the webpack bundle.
 const server = http.createServer((req, res) => {
+    console.log('Request received:', req.url);
     if (req.url != null) {
-        const projectName = req.url.replace('/', '') as keyof typeof projects;
+        let projectName = req.url.replace('/', '') as keyof typeof projects;
+        if (projectName.length == 0) {
+            projectName = 'hub';
+        }
         console.log(`Request for ${req.url}`);
-        var project = projects[projectName];
-        var webpackOutputName = 'webpack_result.js';
+        const project = projects[projectName];
+        const webpackOutputName = 'webpack_result.js';
         if (project != null) {
             webpack({
                 mode: 'development',
