@@ -74,10 +74,10 @@ class Literal<T extends Types> extends Statement<T> {
     }
 }
 
-class ImperiativeBlock<Scope> {
+class ImperiativeBlock<Scope extends Record<string, any>> {
     constructor(public code: string, public scope: Scope) { }
     define<T extends Record<string, Statement<Types>>>(
-        func: (scope: Scope) => T
+        func: (scope: { [key in keyof Scope]: Scope[key] }) => T
     ): EvaluationCheck<ImperiativeBlock<Scope & T>, 'Scope collision on previous define for', keyof Scope & keyof T> {
         const statements = func(this.scope);
         const entries = toEntries(statements);
@@ -97,8 +97,8 @@ class ImperiativeBlock<Scope> {
 // Living example.
 
 const floatConstants = {
-    asdf: 1.0,
-    qwer: 2.0,
+    one: 1.0,
+    two: 2.0,
 }
 
 const searchDirections: [number, number][] = [
@@ -111,24 +111,24 @@ const searchDirections: [number, number][] = [
 console.log(new ImperiativeBlock('', {})
     .define(_ => mapObject(floatConstants, value => new Literal('float', value)))
     .define($ => ({
-        a: $.asdf.add($.qwer),
-        b: $.asdf.sub($.qwer),
+        first: $.one.add($.two),
+        second: $.one.sub($.two),
     }))
     .define($ => ({
         // a: $.b.add($.b).mul($.asdf).neg(),
         // b: $.b.add($.b).mul($.asdf).neg(),
-        d: $.b.add($.b).mul($.asdf).neg(),
+        lotsaMaths: $.second.add($.second).mul($.one).neg(),
     }))
     .define($ => ({
         aggregationExample: new Literal('vec2', 0, 0)
             .aggregate(searchDirections, (previous, direction) =>
-                previous.add(new Literal('vec2', ...direction))),
-        vec3Example: new Constructor('vec3', $.a, $.b, $.asdf),
-        mat2Example: new Constructor('mat2', $.a, $.b, $.asdf, $.d),
+                previous.mul(new Literal('vec2', ...direction))),
+        vec3Example: new Constructor('vec3', $.first, $.second, new Literal('float', 0)),
+        mat2Example: new Constructor('mat2', $.first, $.second, $.one, $.lotsaMaths),
     }))
     .define($ => ({
-        result: $.aggregationExample.combine($.a).as('vec3')
-            .add($.vec3Example).combine($.asdf).as('mat2')
+        result: $.aggregationExample.combine($.first).as('vec3')
+            .add($.vec3Example).combine($.one).as('mat2')
             .add($.mat2Example),
     }))
     .code);
