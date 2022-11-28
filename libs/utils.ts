@@ -52,3 +52,7 @@ export function reduce<T, U>(fn: (acc: U, input: T) => U, initial: U) {
 export function mapObject<T extends { [key: string]: any }, U>(obj: T, func: (value: T[keyof T], key: keyof T) => U) {
     return fromEntries(toEntries(obj).map(([key, value]) => [key, func(value, key)])) as { [key in keyof T]: U };
 }
+
+export type ConvertTuple<T, U> = T extends readonly [any, ...infer B] ? readonly [U, ...ConvertTuple<B, U>]
+    : T extends [any, ...infer B] ? [U, ...ConvertTuple<B, U>]
+    : [];
