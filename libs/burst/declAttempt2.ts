@@ -57,32 +57,47 @@ class ImperiativeBlock<Scope> {
     constructor(public code: string, public scope: Scope) { }
 
     // Same as before but includes a legal statement that draws from the scope of the block.
-    initializeVariables<
+    define<
         T extends { [key: string]: Statement<Types> },
-    // NewScope = { [key in keyof Scope | keyof T]: key extends keyof Scope ? Scope[key] : key extends keyof T ? T[key] : never }
-    >(func: (scope: Scope) => T): ImperiativeBlock<T & Scope> { // 
+    >(func: (scope: Scope) => T): ImperiativeBlock<Scope & T> { // 
         const statements = func(this.scope);
         const entries = toEntries(statements);
-        const newScope = <const>{ ...this.scope, ...statements };
+        const newScope = <const>{
+            ...this.scope,
+            ...fromEntries(entries.map(([key, value]) =>
+                [key, new Statement(value.type, key as string)]))
+        };
         const newCode = entries.reduce((code, [name, statement]) => {
             return `${code}
             ${statement.type} ${name as any} = ${statement.code};`;
         }, this.code);
-        return new ImperiativeBlock(newCode, newScope);
+        return new ImperiativeBlock(newCode, newScope as any);
     }
 }
 
 const constants = {
-    c: 1.0,
+    asdf: 1.0,
 }
 
 // Test out the imperative block
 console.log(new ImperiativeBlock('', {})
-    .initializeVariables(_ => mapObject(constants, (value, key) => new Statement('float', key)))
-    .initializeVariables(scope => ({ a: scope['c'].add(scope['c']), b: scope['c'].sub(scope['c']) }))
-    .initializeVariables(({ a, b, c }) => ({ d: b.add(b).mul(c).neg() }))
-    .initializeVariables(({ a, b }) => ({ vec2Example: a.combine(b).as('vec2') }))
-    .initializeVariables(({ a, b, c }) => ({ vec3Example: a.combine(b).combine(c).as('vec3') }))
-    .initializeVariables(({ a, b, c, d }) => ({ mat2Example: a.combine(b).combine(c).combine(d).as('mat2') }))
+    .define(_ => mapObject(constants, (value, key) => new Statement('float', value.toString())))
+    .define(stack => ({
+        a: stack.asdf.add(stack.asdf),
+        b: stack.asdf.sub(stack.asdf),
+    }))
+    .define(stack => ({
+        d: stack.b.add(stack.b).mul(stack.asdf).neg(),
+    }))
+    .define(stack => ({
+        vec2Example: stack.a.combine(stack.b).as('vec2'),
+        vec3Example: stack.a.combine(stack.b).combine(stack.asdf).as('vec3'),
+        mat2Example: stack.a.combine(stack.b).combine(stack.asdf).combine(stack.d).as('mat2'),
+    }))
+    .define(stack => ({
+        result: stack.vec2Example.combine(stack.a).as("vec3")
+            .add(stack.vec3Example).combine(stack.asdf).as("mat2")
+            .add(stack.mat2Example),
+    }))
     .code);
 
