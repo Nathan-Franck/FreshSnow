@@ -48,3 +48,7 @@ export function filter<T>(fn: (input: T) => boolean) {
 export function reduce<T, U>(fn: (acc: U, input: T) => U, initial: U) {
     return (input: ReadonlyArray<T>) => input.reduce(fn, initial);
 }
+
+export function mapObject<T extends { [key: string]: any }>(obj: T, func: (value: T[keyof T], key: keyof T) => any) {
+    return fromEntries(toEntries(obj).map(([key, value]) => [key, func(value, key)])) as { [key in keyof T]: ReturnType<typeof func> };
+}

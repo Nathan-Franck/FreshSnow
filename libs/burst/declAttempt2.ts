@@ -1,10 +1,10 @@
-import { fromEntries, toEntries } from "../utils";
+import { fromEntries, mapObject, toEntries } from "../utils";
 
 type ScopeDeclaration<T extends string> = `${T} ${string}`;
 type Parameter = `${Types} ${string}`;
 
 class Statement<T extends Types> {
-    constructor(public type: T, public code: string) {}
+    constructor(public type: T, public code: string) { }
     add(other: Statement<T>) {
         return new Statement(this.type, `(${this.code}) + ${other.code}`);
     }
@@ -26,7 +26,7 @@ class Statement<T extends Types> {
 }
 
 class Constructor<Blueprint extends readonly number[]> {
-    constructor(private blueprint: Blueprint, public code: string) {}
+    constructor(private blueprint: Blueprint, public code: string) { }
     combine<U extends Types>(other: Statement<U>) {
         return new Constructor(<const>[...this.blueprint, ...typeBlueprints[other.type]], `${this.code}, ${other.code}`);
     }
@@ -57,25 +57,32 @@ class ImperiativeBlock<Scope> {
     constructor(public code: string, public scope: Scope) { }
 
     // Same as before but includes a legal statement that draws from the scope of the block.
-    initializeVariables<T extends { [key: string]: Types }, NewScope = { [key in keyof Scope | keyof T]: key extends keyof Scope ? Scope[key] : key extends keyof T ? Statement<T[key]> : never }>(variables: T, statement: (scope: Scope) => Statement<T[keyof T]>): ImperiativeBlock<NewScope> {
-        const entries = toEntries(variables);
-        const scopeAdditions = fromEntries(entries.map(([name, type]) => ([name, new Statement(type, name as any)])));
-        const newScope = <const>{ ...this.scope, ...scopeAdditions };
-        const newCode = entries.reduce((code, [name, type]) => {
+    initializeVariables<
+        T extends { [key: string]: Statement<Types> },
+    // NewScope = { [key in keyof Scope | keyof T]: key extends keyof Scope ? Scope[key] : key extends keyof T ? T[key] : never }
+    >(func: (scope: Scope) => T): ImperiativeBlock<T & Scope> { // 
+        const statements = func(this.scope);
+        const entries = toEntries(statements);
+        const newScope = <const>{ ...this.scope, ...statements };
+        const newCode = entries.reduce((code, [name, statement]) => {
             return `${code}
-            ${type} ${name as any} = ${statement(newScope as any).code};`;
+            ${statement.type} ${name as any} = ${statement.code};`;
         }, this.code);
-        return new ImperiativeBlock<NewScope>(newCode, newScope);
+        return new ImperiativeBlock(newCode, newScope);
     }
 }
 
+const constants = {
+    c: 1.0,
+}
+
 // Test out the imperative block
-console.log(new ImperiativeBlock('', {c: new Statement('float', '1.0')})
-    // .initializeVariables({ 'c': 'float' }, _ => new Statement('float', '1.0'))
-    .initializeVariables({ 'a': 'float', 'b': 'float' }, scope => scope['c'].add(scope['c']))
-    .initializeVariables({ 'd': 'float' }, ({ a, b, c}) => b.add(b).mul(c).neg())
-    .initializeVariables({'e': 'vec2'}, ({ a, b }) => a.combine(b).as('vec2'))
-    .initializeVariables({'f': 'vec3'}, ({ a, b, c }) => a.combine(b).combine(c).as('vec3'))
-    .initializeVariables({'g': 'mat2'}, ({ a, b, c, d }) => a.combine(b).combine(c).combine(d).as('mat2'))
+console.log(new ImperiativeBlock('', {})
+    .initializeVariables(_ => mapObject(constants, (value, key) => new Statement('float', key)))
+    .initializeVariables(scope => ({ a: scope['c'].add(scope['c']), b: scope['c'].sub(scope['c']) }))
+    .initializeVariables(({ a, b, c }) => ({ d: b.add(b).mul(c).neg() }))
+    .initializeVariables(({ a, b }) => ({ vec2Example: a.combine(b).as('vec2') }))
+    .initializeVariables(({ a, b, c }) => ({ vec3Example: a.combine(b).combine(c).as('vec3') }))
+    .initializeVariables(({ a, b, c, d }) => ({ mat2Example: a.combine(b).combine(c).combine(d).as('mat2') }))
     .code);
 
