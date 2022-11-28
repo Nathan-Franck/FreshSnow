@@ -29,7 +29,7 @@ export function pipe<T>(input: T): Pipe<T> {
             return pipe(result);
         },
         outFrom: (fn) => {
-            return  fn(input);
+            return fn(input);
         },
     }
 }
@@ -56,3 +56,12 @@ export function mapObject<T extends { [key: string]: any }, U>(obj: T, func: (va
 export type ConvertTuple<T, U> = T extends readonly [any, ...infer B] ? readonly [U, ...ConvertTuple<B, U>]
     : T extends [any, ...infer B] ? [U, ...ConvertTuple<B, U>]
     : [];
+
+export type EvaluationCheck<
+    SuccessType,
+    FailMessage extends string,
+    FailType,
+    FailTypeObj = { [key in FailType extends string ? FailType : never]: never }
+> = keyof FailTypeObj extends never
+    ? SuccessType
+    : { evaluationError: `${FailMessage} ${FailType extends string ? FailType : 'unknown'}` };

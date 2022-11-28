@@ -1,4 +1,4 @@
-import { ConvertTuple, fromEntries, mapObject, toEntries } from '../utils';
+import { ConvertTuple, EvaluationCheck, fromEntries, mapObject, toEntries } from '../utils';
 
 const typeBlueprints = <const>{
     float: [0],
@@ -14,23 +14,23 @@ type Types = keyof typeof typeBlueprints;
 
 class Statement<T extends Types> {
     constructor(public type: T, public code: string) { }
-    add(other: Statement<T>) {
+    add(other: Statement<T>): Statement<T> {
         return new Statement(this.type, `(${this.code}) + ${other.code}`);
     }
-    sub(other: Statement<T>) {
+    sub(other: Statement<T>): Statement<T> {
         return new Statement(this.type, `(${this.code}) - ${other.code}`);
     }
-    mul(other: Statement<T>) {
+    mul(other: Statement<T>): Statement<T> {
         return new Statement(this.type, `(${this.code}) * ${other.code}`);
     }
-    div(other: Statement<T>) {
+    div(other: Statement<T>): Statement<T> {
         return new Statement(this.type, `(${this.code}) / ${other.code}`);
     }
-    neg() {
+    neg(): Statement<T> {
         return new Statement(this.type, `-(${this.code})`);
     }
     combine<U extends Types>(other: Statement<U>) {
-        return new Constructor(<const>[...typeBlueprints[this.type], ...typeBlueprints[other.type]], `${this.code}, ${other.code}`);
+        return new Combiner(typeBlueprints[this.type], this.code).combine(other);
     }
     aggregate<U>(
         elements: readonly U[],
@@ -44,36 +44,41 @@ class Statement<T extends Types> {
     }
 }
 
-class Constructor<Blueprint extends readonly number[]> {
+class Combiner<Blueprint extends readonly number[]> {
     constructor(private blueprint: Blueprint, public code: string) { }
     combine<U extends Types>(other: Statement<U>) {
-        return new Constructor(<const>[...this.blueprint, ...typeBlueprints[other.type]], `${this.code}, ${other.code}`);
+        return new Combiner(<const>[...this.blueprint, ...typeBlueprints[other.type]], `${this.code}, ${other.code}`);
     }
-    as<U extends keyof { [key in Types as TypeBlueprints[key] extends Blueprint ? key : never]: true }>(type: U) {
+    as<U extends keyof { [key in Types as TypeBlueprints[key] extends Blueprint ? key : never]: true }>(type: U): Statement<U> {
         return new Statement(type, `${type}(${this.code})`);
+    }
+}
+
+class Constructor<T extends Types> extends Statement<T> {
+    constructor(type: T, ...args: ConvertTuple<TypeBlueprints[T], Statement<'float'>>) {
+        super(type, `${type}(${args.map(arg => arg.code).join(', ')})`);
     }
 }
 
 class Literal<T extends Types> extends Statement<T> {
     constructor(
         type: T,
-        values: TypeBlueprints[T] extends readonly [0]
-            ? number
-            : ConvertTuple<TypeBlueprints[T], number>
+        ...values: ConvertTuple<TypeBlueprints[T], number>
     ) {
-        if (typeof values == 'number') {
-            super(type, values.toString());
+        if (values.length == 1) {
+            super(type, values[0].toString());
         }
         else {
             super(type, `${type}(${values.map(value => value.toString()).join(', ')})`);
         }
     }
 }
+
 class ImperiativeBlock<Scope> {
     constructor(public code: string, public scope: Scope) { }
-
-    // Same as before but includes a legal statement that draws from the scope of the block.
-    define<T extends { [key: string]: Statement<Types> }>(func: (scope: Scope) => T): ImperiativeBlock<Scope & T> {
+    define<T extends Record<string, Statement<Types>>>(
+        func: (scope: Scope) => T
+    ): EvaluationCheck<ImperiativeBlock<Scope & T>, 'Scope collision on previous define for', keyof Scope & keyof T> {
         const statements = func(this.scope);
         const entries = toEntries(statements);
         const newScope = <const>{
@@ -85,7 +90,7 @@ class ImperiativeBlock<Scope> {
             return `${code}
             ${statement.type} ${name as any} = ${statement.code};`;
         }, this.code);
-        return new ImperiativeBlock(newCode, newScope as any);
+        return new ImperiativeBlock(newCode, newScope as any) as any;
     }
 }
 
@@ -96,34 +101,35 @@ const floatConstants = {
     qwer: 2.0,
 }
 
-const searchDirections = <const>[
+const searchDirections: [number, number][] = [
     [1, 0],
     [0, 1],
     [-1, 0],
     [0, -1],
 ];
 
-// Test out the imperative block
 console.log(new ImperiativeBlock('', {})
     .define(_ => mapObject(floatConstants, value => new Literal('float', value)))
-    .define(stack => ({
-        a: stack.asdf.add(stack.qwer),
-        b: stack.asdf.sub(stack.qwer),
+    .define($ => ({
+        a: $.asdf.add($.qwer),
+        b: $.asdf.sub($.qwer),
     }))
-    .define(stack => ({
-        d: stack.b.add(stack.b).mul(stack.asdf).neg(),
+    .define($ => ({
+        // a: $.b.add($.b).mul($.asdf).neg(),
+        // b: $.b.add($.b).mul($.asdf).neg(),
+        d: $.b.add($.b).mul($.asdf).neg(),
     }))
-    .define(stack => ({
-        vec2Example: new Literal('vec2', [0, 0])
+    .define($ => ({
+        aggregationExample: new Literal('vec2', 0, 0)
             .aggregate(searchDirections, (previous, direction) =>
-                previous.add(new Literal('vec2', direction))),
-        vec3Example: stack.a.combine(stack.b).combine(stack.asdf).as('vec3'),
-        mat2Example: stack.a.combine(stack.b).combine(stack.asdf).combine(stack.d).as('mat2'),
+                previous.add(new Literal('vec2', ...direction))),
+        vec3Example: new Constructor('vec3', $.a, $.b, $.asdf),
+        mat2Example: new Constructor('mat2', $.a, $.b, $.asdf, $.d),
     }))
-    .define(stack => ({
-        result: stack.vec2Example.combine(stack.a).as('vec3')
-            .add(stack.vec3Example).combine(stack.asdf).as('mat2')
-            .add(stack.mat2Example),
+    .define($ => ({
+        result: $.aggregationExample.combine($.a).as('vec3')
+            .add($.vec3Example).combine($.asdf).as('mat2')
+            .add($.mat2Example),
     }))
     .code);
 
