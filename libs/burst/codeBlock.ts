@@ -122,7 +122,7 @@ const mathOps = <const>{
 
 type MathOps = typeof mathOps;
 
-const exprExample = expr('mat4', { code: 'a' }).add(expr('mat4', { code: 'b' }));
+const exprExample = expr('mat4', { code: 'a' }).add(expr('mat4', { code: 'b' })).length().mul(expr('float', { code: 'c' }));
 console.log(JSON.stringify(exprExample.ast));
 console.log(evalExpr(exprExample.ast));
 
