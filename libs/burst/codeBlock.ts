@@ -1,4 +1,4 @@
-import { ConvertTuple, EvaluationCheck, fromEntries, mapObject, toEntries } from '../utils';
+import { ConvertTuple, fromEntries, mapObject, toEntries, toKeys } from '../utils';
 
 const typeBlueprints = <const>{
     float: [0],
@@ -12,47 +12,162 @@ const typeBlueprints = <const>{
 type TypeBlueprints = typeof typeBlueprints;
 export type Types = keyof typeof typeBlueprints;
 
-export class Expr<T extends Types> {
-    constructor(public type: T, public code: string) { }
-    add(other: Expr<T>): Expr<T> {
-        return new Expr(this.type, `(${this.code}) + ${other.code}`);
-    }
-    sub(other: Expr<T>): Expr<T> {
-        return new Expr(this.type, `(${this.code}) - ${other.code}`);
-    }
-    mul(other: Expr<T>): Expr<T> {
-        return new Expr(this.type, `(${this.code}) * ${other.code}`);
-    }
-    div(other: Expr<T>): Expr<T> {
-        return new Expr(this.type, `(${this.code}) / ${other.code}`);
-    }
-    neg(): Expr<T> {
-        return new Expr(this.type, `-(${this.code})`);
-    }
-    combine<U extends Types>(other: Expr<U>) {
-        return new Combiner(typeBlueprints[this.type], this.code).combine(other);
-    }
-    aggregate<U>(
-        elements: readonly U[],
-        func: (previous: Expr<T>, elem: U, index: number) => Expr<T>
-    ): Expr<T> {
-        var statement = this as Expr<T>;
-        for (let i = 0; i < elements.length; i++) {
-            statement = func(statement, elements[i], i);
-        }
-        return statement;
-    }
+const mathOps = <const>{
+    add: {
+        validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
+        returnType: (a: Types, b: Types) => a,
+        glslCode: (a: string, b: string) => `(${a}) + ${b}`,
+    },
+    sub: {
+        validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
+        returnType: (a: Types, b: Types) => a,
+        glslCode: (a: string, b: string) => `(${a}) - ${b}`,
+    },
+    mul: {
+        validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
+        returnType: (a: Types, b: Types) => a,
+        glslCode: (a: string, b: string) => `(${a}) * ${b}`,
+    },
+    div: {
+        validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
+        returnType: (a: Types, b: Types) => a,
+        glslCode: (a: string, b: string) => `(${a}) / ${b}`,
+    },
+    mod: {
+        validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
+        returnType: (a: Types, b: Types) => a,
+        glslCode: (a: string, b: string) => `(${a}) % ${b}`,
+    },
+    neg: {
+        validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
+        returnType: (a: Types) => a,
+        glslCode: (a: string) => `-(${a})`,
+    },
+    pow: {
+        validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
+        returnType: (a: Types, b: Types) => a,
+        glslCode: (a: string, b: string) => `pow(${a}, ${b})`,
+    },
+    dot: {
+        validTypes: ['vec2', 'vec3', 'vec4'],
+        returnType: (a: Types, b: Types) => <const>'float',
+        glslCode: (a: string, b: string) => `dot(${a}, ${b})`,
+    },
+    cross: {
+        validTypes: ['vec3'],
+        returnType: (a: Types, b: Types) => <const>'vec3',
+        glslCode: (a: string, b: string) => `cross(${a}, ${b})`,
+    },
+    min: {
+        validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
+        returnType: (a: Types, b: Types) => a,
+        glslCode: (a: string, b: string) => `min(${a}, ${b})`,
+    },
+    max: {
+        validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
+        returnType: (a: Types, b: Types) => a,
+        glslCode: (a: string, b: string) => `max(${a}, ${b})`,
+    },
+    clamp: {
+        validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
+        returnType: (a: Types, b: Types, c: Types) => a,
+        glslCode: (a: string, b: string, c: string) => `clamp(${a}, ${b}, ${c})`,
+    },
+    mix: {
+        validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
+        returnType: (a: Types, b: Types, c: Types) => a,
+        glslCode: (a: string, b: string, c: string) => `mix(${a}, ${b}, ${c})`,
+    },
+    step: {
+        validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
+        returnType: (a: Types, b: Types) => a,
+        glslCode: (a: string, b: string) => `step(${a}, ${b})`,
+    },
+    smoothstep: {
+        validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
+        returnType: (a: Types, b: Types, c: Types) => a,
+        glslCode: (a: string, b: string, c: string) => `smoothstep(${a}, ${b}, ${c})`,
+    },
+    length: {
+        validTypes: ['vec2', 'vec3', 'vec4'],
+        returnType: (a: Types) => <const>'float',
+        glslCode: (a: string) => `length(${a})`,
+    },
+    distance: {
+        validTypes: ['vec2', 'vec3', 'vec4'],
+        returnType: (a: Types, b: Types) => <const>'float',
+        glslCode: (a: string, b: string) => `distance(${a}, ${b})`,
+    },
+    normalize: {
+        validTypes: ['vec2', 'vec3', 'vec4'],
+        returnType: (a: Types) => a,
+        glslCode: (a: string) => `normalize(${a})`,
+    },
+    faceforward: {
+        validTypes: ['vec2', 'vec3', 'vec4'],
+        returnType: (a: Types, b: Types, c: Types) => a,
+        glslCode: (a: string, b: string, c: string) => `faceforward(${a}, ${b}, ${c})`,
+    },
+    reflect: {
+        validTypes: ['vec2', 'vec3', 'vec4'],
+        returnType: (a: Types, b: Types) => a,
+        glslCode: (a: string, b: string) => `reflect(${a}, ${b})`,
+    },
+    refract: {
+        validTypes: ['vec2', 'vec3', 'vec4'],
+        returnType: (a: Types, b: Types, c: Types) => a,
+        glslCode: (a: string, b: string, c: string) => `refract(${a}, ${b}, ${c})`,
+    },
+};
+
+type MathOps = typeof mathOps;
+
+expr('mat4', { op: 'const', args: [1] }).add(1 as any as Expr<'mat4'>).length().neg();
+
+export type Expr<T extends Types> = { [key in keyof MathOps as MathOps[key] extends { validTypes: infer VT }
+    ? T extends VT[keyof VT]
+    ? key
+    : never
+    : never]: (...args: Parameters<MathOps[key]["returnType"]> extends [any, ...infer Rest] ? ConvertTuple<Rest, Expr<T>> : never) => Expr<ReturnType<MathOps[key]["returnType"]>> }
+
+export function expr<T extends Types>(type: T, ast: any) {
+    // Get all math ops that are valid for this type
+    const ops = fromEntries(toKeys(mathOps)
+        .map(op => ([op, (...args: any[]) => expr(mathOps[op].returnType(type, ...args.map(a => a.type)), {
+            op,
+            args: [type, ...args.map(a => a.ast)],
+        })]))) as any as Expr<T>;
+
+    return ops;//{
+    //     ...ops,
+    //     type,
+    //     ast,
+    // };
+
+    // combine<U extends Types>(other: Expr<U>) {
+    //     return new Combiner(typeBlueprints[this.type], this.code).combine(other);
+    // }
+    // aggregate<U>(
+    //     elements: readonly U[],
+    //     func: (previous: Expr<T>, elem: U, index: number) => Expr<T>
+    // ): Expr<T> {
+    //     var statement = this as Expr<T>;
+    //     for (let i = 0; i < elements.length; i++) {
+    //         statement = func(statement, elements[i], i);
+    //     }
+    //     return statement;
+    // }
 }
 
-class Combiner<Blueprint extends readonly number[]> {
-    constructor(private blueprint: Blueprint, public code: string) { }
-    combine<U extends Types>(other: Expr<U>) {
-        return new Combiner(<const>[...this.blueprint, ...typeBlueprints[other.type]], `${this.code}, ${other.code}`);
-    }
-    as<U extends keyof { [key in Types as TypeBlueprints[key] extends Blueprint ? key : never]: true }>(type: U): Expr<U> {
-        return new Expr(type, `${type}(${this.code})`);
-    }
-}
+// class Combiner<Blueprint extends readonly number[]> {
+//     constructor(private blueprint: Blueprint, public code: string) { }
+//     combine<U extends Types>(other: Expr<U>) {
+//         return new Combiner(<const>[...this.blueprint, ...typeBlueprints[other.type]], `${this.code}, ${other.code}`);
+//     }
+//     as<U extends keyof { [key in Types as TypeBlueprints[key] extends Blueprint ? key : never]: true }>(type: U): Expr<U> {
+//         return new Expr(type, `${type}(${this.code})`);
+//     }
+// }
 
 class Value<T extends Types> extends Expr<T> {
     constructor(type: T, ...args: ConvertTuple<TypeBlueprints[T], Expr<'float'>>) {
