@@ -10,9 +10,9 @@ const typeBlueprints = <const>{
     mat4: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 };
 type TypeBlueprints = typeof typeBlueprints;
-type Types = keyof typeof typeBlueprints;
+export type Types = keyof typeof typeBlueprints;
 
-class Expr<T extends Types> {
+export class Expr<T extends Types> {
     constructor(public type: T, public code: string) { }
     add(other: Expr<T>): Expr<T> {
         return new Expr(this.type, `(${this.code}) + ${other.code}`);
@@ -82,11 +82,11 @@ class Const<T extends Types> extends Expr<T> {
     }
 }
 
-class CodeBlock<Scope extends Record<string, any> = {}> {
-    constructor(public code: string = '', public scope: Scope = {} as Scope) { }
+export class CodeBlock<Scope extends Record<string, any> = {}> {
+    constructor(public scope: Scope = {} as Scope, public code: string = '') { }
     define<T extends Record<string, Expr<Types>>>(
         func: (scope: { [key in keyof Scope]: Scope[key] }) => T
-    ): EvaluationCheck<CodeBlock<Scope & T>, 'Scope collision on previous define for', keyof Scope & keyof T> {
+    ): CodeBlock<Scope & T> {
         const statements = func(this.scope);
         const entries = toEntries(statements);
         const newScope = <const>{
@@ -95,47 +95,47 @@ class CodeBlock<Scope extends Record<string, any> = {}> {
                 [key, new Expr(value.type, key as string)]))
         };
         const newCode = entries.reduce((code, [name, statement]) => {
-            return `${code}
-            ${statement.type} ${name as any} = ${statement.code};`;
+            return `${code}\n\t${statement.type} ${name as any} = ${statement.code};`;
         }, this.code);
-        return new CodeBlock(newCode, newScope as any) as any;
+        return new CodeBlock(newScope as any, newCode) as any;
     }
 }
 
-// Living example.
+export function test() {
+    // Living example.
 
-const floatConstants = {
-    onePointFive: 1.5,
-    two: 2.0,
+    const floatConstants = {
+        onePointFive: 1.5,
+        two: 2.0,
+    };
+
+    const searchDirections: [number, number][] = [
+        [1, 0],
+        [0, 1],
+        [-1, 0],
+        [0, -1],
+    ];
+
+    console.log(new CodeBlock()
+        .define(_ => mapObject(floatConstants, value => new Const('float', value)))
+        .define($ => ({
+            first: $.onePointFive.add($.two),
+            second: $.onePointFive.sub($.two),
+        }))
+        .define($ => ({
+            lotsaMaths: $.second.add($.second).mul($.onePointFive).neg(),
+        }))
+        .define($ => ({
+            aggregationExample: new Const('vec2', 0, 0)
+                .aggregate(searchDirections, (previous, direction) =>
+                    previous.mul(new Const('vec2', ...direction))),
+            vec3Example: new Value('vec3', $.first, $.second, new Const('float', 0)),
+            mat2Example: new Value('mat2', $.first, $.second, $.onePointFive, $.lotsaMaths),
+        }))
+        .define($ => ({
+            result: $.aggregationExample.combine($.first).as('vec3')
+                .add($.vec3Example).combine($.onePointFive).as('mat2')
+                .add($.mat2Example),
+        }))
+        .code);
 }
-
-const searchDirections: [number, number][] = [
-    [1, 0],
-    [0, 1],
-    [-1, 0],
-    [0, -1],
-];
-
-console.log(new CodeBlock()
-    .define(_ => mapObject(floatConstants, value => new Const('float', value)))
-    .define($ => ({
-        first: $.onePointFive.add($.two),
-        second: $.onePointFive.sub($.two),
-    }))
-    .define($ => ({
-        lotsaMaths: $.second.add($.second).mul($.onePointFive).neg(),
-    }))
-    .define($ => ({
-        aggregationExample: new Const('vec2', 0, 0)
-            .aggregate(searchDirections, (previous, direction) =>
-                previous.mul(new Const('vec2', ...direction))),
-        vec3Example: new Value('vec3', $.first, $.second, new Const('float', 0)),
-        mat2Example: new Value('mat2', $.first, $.second, $.onePointFive, $.lotsaMaths),
-    }))
-    .define($ => ({
-        result: $.aggregationExample.combine($.first).as('vec3')
-            .add($.vec3Example).combine($.onePointFive).as('mat2')
-            .add($.mat2Example),
-    }))
-    .code);
-
