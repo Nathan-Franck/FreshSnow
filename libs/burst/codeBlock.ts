@@ -122,27 +122,31 @@ const mathOps = <const>{
 
 type MathOps = typeof mathOps;
 
-expr('mat4', { op: 'const', args: [1] }).add(1 as any as Expr<'mat4'>).length().neg();
+const exprExample = expr('mat4', { code: 'a' }).add(expr('mat4', { code: 'b' }));
+console.log(JSON.stringify(exprExample.ast));
+console.log(evalExpr(exprExample.ast));
 
 export type Expr<T extends Types> = { [key in keyof MathOps as MathOps[key] extends { validTypes: infer VT }
     ? T extends VT[keyof VT]
     ? key
     : never
     : never]: (...args: Parameters<MathOps[key]["returnType"]> extends [any, ...infer Rest] ? ConvertTuple<Rest, Expr<T>> : never) => Expr<ReturnType<MathOps[key]["returnType"]>> }
+    & { type: T, ast: any };
 
 export function expr<T extends Types>(type: T, ast: any) {
     // Get all math ops that are valid for this type
     const ops = fromEntries(toKeys(mathOps)
-        .map(op => ([op, (...args: any[]) => expr(mathOps[op].returnType(type, ...args.map(a => a.type)), {
+        /*@ts-ignore*/
+        .map(op => ([op, (...args: Expr<any>[]) => expr(mathOps[op].returnType(...[type].concat(args.map(a => a.type))), {
             op,
-            args: [type, ...args.map(a => a.ast)],
-        })]))) as any as Expr<T>;
+            args: [ast, ...args.map(a => a.ast)],
+        })])));
 
-    return ops;//{
-    //     ...ops,
-    //     type,
-    //     ast,
-    // };
+    return {
+        ...ops,
+        type,
+        ast,
+    } as any as Expr<T>;
 
     // combine<U extends Types>(other: Expr<U>) {
     //     return new Combiner(typeBlueprints[this.type], this.code).combine(other);
@@ -159,6 +163,14 @@ export function expr<T extends Types>(type: T, ast: any) {
     // }
 }
 
+export function evalExpr(ast: any) {
+    /*@ts-ignore*/
+    const op = mathOps[ast.op];
+    if (ast.op == null || op == null) return ast.code;
+    /*@ts-ignore*/
+    return op.glslCode(...ast.args.map(evalExpr));
+}
+
 // class Combiner<Blueprint extends readonly number[]> {
 //     constructor(private blueprint: Blueprint, public code: string) { }
 //     combine<U extends Types>(other: Expr<U>) {
@@ -169,88 +181,88 @@ export function expr<T extends Types>(type: T, ast: any) {
 //     }
 // }
 
-class Value<T extends Types> extends Expr<T> {
-    constructor(type: T, ...args: ConvertTuple<TypeBlueprints[T], Expr<'float'>>) {
-        super(type, `${type}(${args.map(arg => arg.code).join(', ')})`);
-    }
-}
+// class Value<T extends Types> extends Expr<T> {
+//     constructor(type: T, ...args: ConvertTuple<TypeBlueprints[T], Expr<'float'>>) {
+//         super(type, `${type}(${args.map(arg => arg.code).join(', ')})`);
+//     }
+// }
 
-class Const<T extends Types> extends Expr<T> {
-    constructor(
-        type: T,
-        ...values: ConvertTuple<TypeBlueprints[T], number>
-    ) {
-        if (values.length == 1) {
-            super(type, Const.numberToFloatLiteral(values[0]));
-        }
-        else {
-            super(type, `${type}(${values.map(value => Const.numberToFloatLiteral(value)).join(', ')})`);
-        }
-    }
+// class Const<T extends Types> extends Expr<T> {
+//     constructor(
+//         type: T,
+//         ...values: ConvertTuple<TypeBlueprints[T], number>
+//     ) {
+//         if (values.length == 1) {
+//             super(type, Const.numberToFloatLiteral(values[0]));
+//         }
+//         else {
+//             super(type, `${type}(${values.map(value => Const.numberToFloatLiteral(value)).join(', ')})`);
+//         }
+//     }
 
-    static numberToFloatLiteral(value: number) {
-        var string = value.toString();
-        if (string.indexOf('.') == -1) {
-            string += '.0';
-        }
-        return string;
-    }
-}
+//     static numberToFloatLiteral(value: number) {
+//         var string = value.toString();
+//         if (string.indexOf('.') == -1) {
+//             string += '.0';
+//         }
+//         return string;
+//     }
+// }
 
-export class CodeBlock<Scope extends Record<string, any> = {}> {
-    constructor(public scope: Scope = {} as Scope, public code: string = '') { }
-    define<T extends Record<string, Expr<Types>>>(
-        func: (scope: { [key in keyof Scope]: Scope[key] }) => T
-    ): CodeBlock<Scope & T> {
-        const statements = func(this.scope);
-        const entries = toEntries(statements);
-        const newScope = <const>{
-            ...this.scope,
-            ...fromEntries(entries.map(([key, value]) =>
-                [key, new Expr(value.type, key as string)]))
-        };
-        const newCode = entries.reduce((code, [name, statement]) => {
-            return `${code}\n\t${statement.type} ${name as any} = ${statement.code};`;
-        }, this.code);
-        return new CodeBlock(newScope as any, newCode) as any;
-    }
-}
+// export class CodeBlock<Scope extends Record<string, any> = {}> {
+//     constructor(public scope: Scope = {} as Scope, public code: string = '') { }
+//     define<T extends Record<string, Expr<Types>>>(
+//         func: (scope: { [key in keyof Scope]: Scope[key] }) => T
+//     ): CodeBlock<Scope & T> {
+//         const statements = func(this.scope);
+//         const entries = toEntries(statements);
+//         const newScope = <const>{
+//             ...this.scope,
+//             ...fromEntries(entries.map(([key, value]) =>
+//                 [key, new Expr(value.type, key as string)]))
+//         };
+//         const newCode = entries.reduce((code, [name, statement]) => {
+//             return `${code}\n\t${statement.type} ${name as any} = ${statement.code};`;
+//         }, this.code);
+//         return new CodeBlock(newScope as any, newCode) as any;
+//     }
+// }
 
-export function test() {
-    // Living example.
+// export function test() {
+//     // Living example.
 
-    const floatConstants = {
-        onePointFive: 1.5,
-        two: 2.0,
-    };
+//     const floatConstants = {
+//         onePointFive: 1.5,
+//         two: 2.0,
+//     };
 
-    const searchDirections: [number, number][] = [
-        [1, 0],
-        [0, 1],
-        [-1, 0],
-        [0, -1],
-    ];
+//     const searchDirections: [number, number][] = [
+//         [1, 0],
+//         [0, 1],
+//         [-1, 0],
+//         [0, -1],
+//     ];
 
-    console.log(new CodeBlock()
-        .define(_ => mapObject(floatConstants, value => new Const('float', value)))
-        .define($ => ({
-            first: $.onePointFive.add($.two),
-            second: $.onePointFive.sub($.two),
-        }))
-        .define($ => ({
-            lotsaMaths: $.second.add($.second).mul($.onePointFive).neg(),
-        }))
-        .define($ => ({
-            aggregationExample: new Const('vec2', 0, 0)
-                .aggregate(searchDirections, (previous, direction) =>
-                    previous.mul(new Const('vec2', ...direction))),
-            vec3Example: new Value('vec3', $.first, $.second, new Const('float', 0)),
-            mat2Example: new Value('mat2', $.first, $.second, $.onePointFive, $.lotsaMaths),
-        }))
-        .define($ => ({
-            result: $.aggregationExample.combine($.first).as('vec3')
-                .add($.vec3Example).combine($.onePointFive).as('mat2')
-                .add($.mat2Example),
-        }))
-        .code);
-}
+//     console.log(new CodeBlock()
+//         .define(_ => mapObject(floatConstants, value => new Const('float', value)))
+//         .define($ => ({
+//             first: $.onePointFive.add($.two),
+//             second: $.onePointFive.sub($.two),
+//         }))
+//         .define($ => ({
+//             lotsaMaths: $.second.add($.second).mul($.onePointFive).neg(),
+//         }))
+//         .define($ => ({
+//             aggregationExample: new Const('vec2', 0, 0)
+//                 .aggregate(searchDirections, (previous, direction) =>
+//                     previous.mul(new Const('vec2', ...direction))),
+//             vec3Example: new Value('vec3', $.first, $.second, new Const('float', 0)),
+//             mat2Example: new Value('mat2', $.first, $.second, $.onePointFive, $.lotsaMaths),
+//         }))
+//         .define($ => ({
+//             result: $.aggregationExample.combine($.first).as('vec3')
+//                 .add($.vec3Example).combine($.onePointFive).as('mat2')
+//                 .add($.mat2Example),
+//         }))
+//         .code);
+// }
