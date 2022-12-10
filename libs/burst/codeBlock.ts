@@ -15,122 +15,122 @@ export type Types = keyof typeof typeBlueprints;
 const mathOps = <const>{
     add: {
         validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
-        returnType: (a: Types, b: Types) => a,
+        returnType: 'T',
         glslCode: (a: string, b: string) => `(${a}) + ${b}`,
     },
     sub: {
         validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
-        returnType: (a: Types, b: Types) => a,
+        returnType: 'T',
         glslCode: (a: string, b: string) => `(${a}) - ${b}`,
     },
     mul: {
         validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
-        returnType: (a: Types, b: Types) => a,
+        returnType: 'T',
         glslCode: (a: string, b: string) => `(${a}) * ${b}`,
     },
     div: {
         validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
-        returnType: (a: Types, b: Types) => a,
+        returnType: 'T',
         glslCode: (a: string, b: string) => `(${a}) / ${b}`,
     },
     mod: {
         validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
-        returnType: (a: Types, b: Types) => a,
+        returnType: 'T',
         glslCode: (a: string, b: string) => `(${a}) % ${b}`,
     },
     neg: {
         validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
-        returnType: (a: Types) => a,
+        returnType: 'T',
         glslCode: (a: string) => `-(${a})`,
     },
     pow: {
         validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
-        returnType: (a: Types, b: Types) => a,
+        returnType: 'T',
         glslCode: (a: string, b: string) => `pow(${a}, ${b})`,
     },
     dot: {
         validTypes: ['vec2', 'vec3', 'vec4'],
-        returnType: (a: Types, b: Types) => <const>'float',
+        returnType: 'float',
         glslCode: (a: string, b: string) => `dot(${a}, ${b})`,
     },
     cross: {
         validTypes: ['vec3'],
-        returnType: (a: Types, b: Types) => <const>'vec3',
+        returnType: 'vec3',
         glslCode: (a: string, b: string) => `cross(${a}, ${b})`,
     },
     min: {
         validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
-        returnType: (a: Types, b: Types) => a,
+        returnType: 'T',
         glslCode: (a: string, b: string) => `min(${a}, ${b})`,
     },
     max: {
         validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
-        returnType: (a: Types, b: Types) => a,
+        returnType: 'T',
         glslCode: (a: string, b: string) => `max(${a}, ${b})`,
     },
     clamp: {
         validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
-        returnType: (a: Types, b: Types, c: Types) => a,
+        returnType: 'T',
         glslCode: (a: string, b: string, c: string) => `clamp(${a}, ${b}, ${c})`,
     },
     mix: {
         validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
-        returnType: (a: Types, b: Types, c: Types) => a,
+        returnType: 'T',
         glslCode: (a: string, b: string, c: string) => `mix(${a}, ${b}, ${c})`,
     },
     step: {
         validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
-        returnType: (a: Types, b: Types) => a,
+        returnType: 'T',
         glslCode: (a: string, b: string) => `step(${a}, ${b})`,
     },
     smoothstep: {
         validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
-        returnType: (a: Types, b: Types, c: Types) => a,
+        returnType: 'T',
         glslCode: (a: string, b: string, c: string) => `smoothstep(${a}, ${b}, ${c})`,
     },
     length: {
         validTypes: ['vec2', 'vec3', 'vec4'],
-        returnType: (a: Types) => <const>'float',
+        returnType: 'float',
         glslCode: (a: string) => `length(${a})`,
     },
     distance: {
         validTypes: ['vec2', 'vec3', 'vec4'],
-        returnType: (a: Types, b: Types) => <const>'float',
+        returnType: 'float',
         glslCode: (a: string, b: string) => `distance(${a}, ${b})`,
     },
     normalize: {
         validTypes: ['vec2', 'vec3', 'vec4'],
-        returnType: (a: Types) => a,
+        returnType: 'T',
         glslCode: (a: string) => `normalize(${a})`,
     },
     faceforward: {
         validTypes: ['vec2', 'vec3', 'vec4'],
-        returnType: (a: Types, b: Types, c: Types) => a,
+        returnType: 'T',
         glslCode: (a: string, b: string, c: string) => `faceforward(${a}, ${b}, ${c})`,
     },
     reflect: {
         validTypes: ['vec2', 'vec3', 'vec4'],
-        returnType: (a: Types, b: Types) => a,
+        returnType: 'T',
         glslCode: (a: string, b: string) => `reflect(${a}, ${b})`,
     },
     refract: {
         validTypes: ['vec2', 'vec3', 'vec4'],
-        returnType: (a: Types, b: Types, c: Types) => a,
+        returnType: 'T',
         glslCode: (a: string, b: string, c: string) => `refract(${a}, ${b}, ${c})`,
     },
 };
 
 type MathOps = typeof mathOps;
 
-const exprExample = expr('mat4', { code: 'a' }).add(expr('mat4', { code: 'b' })).length().mul(expr('float', { code: 'c' }));
-console.log(JSON.stringify(exprExample.ast));
-console.log(evalExpr(exprExample.ast));
+type CastIfGeneric<TypesOrGeneric extends Types | 'T', T> = TypesOrGeneric extends 'T' ? T : TypesOrGeneric;
+
+type thinger = CastIfGeneric<MathOps['div']["returnType"], 'float'>;
 
 export type Expr<T extends Types> = { [key in keyof MathOps as MathOps[key] extends { validTypes: infer VT }
     ? T extends VT[keyof VT]
     ? key
     : never
-    : never]: (...args: Parameters<MathOps[key]["returnType"]> extends [any, ...infer Rest] ? ConvertTuple<Rest, Expr<T>> : never) => Expr<ReturnType<MathOps[key]["returnType"]>> }
+    : never]: (...args: Parameters<MathOps[key]["glslCode"]> extends [any, ...infer Rest] ? ConvertTuple<Rest, Expr<T>> : never) => Expr<CastIfGeneric<MathOps[key]["returnType"], T>> }
     & { type: T, ast: any };
 
 export function expr<T extends Types>(type: T, ast: any) {
@@ -228,41 +228,95 @@ export function evalExpr(ast: any) {
 //     }
 // }
 
-// export function test() {
-//     // Living example.
+function codeblock<Scope extends Record<string, any> = {}>(scope: Scope = {} as Scope, code: string = ''): CodeBlock<Scope> {
+    return {
+        scope,
+        code,
+        define<T extends Record<string, Expr<Types>>>(
+            func: (scope: { [key in keyof Scope]: Scope[key] }) => T
+        ): CodeBlock<Scope & T> {
+            const statements = func(this.scope);
+            const entries = toEntries(statements);
+            const newScope = <const>{
+                ...this.scope,
+                ...fromEntries(entries.map(([key, value]) =>
 
-//     const floatConstants = {
-//         onePointFive: 1.5,
-//         two: 2.0,
-//     };
+                    [key, expr(value.type, key as string)]))
+            };
+            const newCode = entries.reduce((code, [name, statement]) => {
+                return `${code}\n\t${statement.type} ${name as any} = ${statement.code};`;
+            }, this.code);
+            return codeblock(newScope as any, newCode) as any;
+        }
+    };
+}
 
-//     const searchDirections: [number, number][] = [
-//         [1, 0],
-//         [0, 1],
-//         [-1, 0],
-//         [0, -1],
-//     ];
+type CodeBlock<Scope extends Record<string, any> = {}> = {
+    scope: Scope;
+    code: string;
+    define<T extends Record<string, { [key in Types]: Expr<key> }[Types]>>(
+        func: (scope: { [key in keyof Scope]: Scope[key] }) => T
+    ): CodeBlock<Scope & T>;
+}
 
-//     console.log(new CodeBlock()
-//         .define(_ => mapObject(floatConstants, value => new Const('float', value)))
-//         .define($ => ({
-//             first: $.onePointFive.add($.two),
-//             second: $.onePointFive.sub($.two),
-//         }))
-//         .define($ => ({
-//             lotsaMaths: $.second.add($.second).mul($.onePointFive).neg(),
-//         }))
-//         .define($ => ({
-//             aggregationExample: new Const('vec2', 0, 0)
-//                 .aggregate(searchDirections, (previous, direction) =>
-//                     previous.mul(new Const('vec2', ...direction))),
-//             vec3Example: new Value('vec3', $.first, $.second, new Const('float', 0)),
-//             mat2Example: new Value('mat2', $.first, $.second, $.onePointFive, $.lotsaMaths),
-//         }))
-//         .define($ => ({
-//             result: $.aggregationExample.combine($.first).as('vec3')
-//                 .add($.vec3Example).combine($.onePointFive).as('mat2')
-//                 .add($.mat2Example),
-//         }))
-//         .code);
-// }
+
+function numberToFloatLiteral(value: number) {
+    var string = value.toString();
+    if (string.indexOf('.') == -1) {
+        string += '.0';
+    }
+    return string;
+}
+
+function constant<T extends Types>(type: T, ...values: ConvertTuple<TypeBlueprints[T], number>) {
+    if (values.length == 1) {
+        return expr(type, numberToFloatLiteral(values[0]));
+    }
+    else {
+        return expr(type, `${type}(${values.map(value => numberToFloatLiteral(value)).join(', ')})`);
+    }
+}
+
+function value<T extends Types>(type: T, ...args: ConvertTuple<TypeBlueprints[T], Expr<'float'>>) {
+    return expr(type, `${type}(${args.map(arg => arg.code).join(', ')})`);
+}
+
+
+// Living example.
+export function test() {
+
+    const floatConstants = {
+        onePointFive: 1.5,
+        two: 2.0,
+    };
+    const searchDirections: [number, number][] = [
+        [1, 0],
+        [0, 1],
+        [-1, 0],
+        [0, -1],
+    ];
+    console.log(codeblock()
+        .define(_ => mapObject(floatConstants, value => constant('float', value)))
+        .define($ => ({
+            first: $.onePointFive.add($.two),
+            second: $.onePointFive.sub($.two),
+        }))
+        .define($ => ({
+            lotsaMaths: $.second.add($.second).mul($.onePointFive).neg(),
+        }))
+        .define($ => ({
+            // aggregationExample: Const('vec2', 0, 0)
+            //     .aggregate(searchDirections, (previous, direction) =>
+            //         previous.mul(Const('vec2', ...direction))),
+            vec3Example: value('vec3', $.first, $.second, constant('float', 0)),
+            mat2Example: value('mat2', $.first, $.second, $.onePointFive, $.lotsaMaths),
+        }))
+        .define($ => ({
+            result: $.vec3Example,
+        }))
+        .code);
+}
+
+const exprExample = expr('mat4', { code: 'a' }).add(expr('mat4', { code: 'b' })).length().mul(expr('float', { code: 'c' }));
+console.log(JSON.stringify(exprExample.ast));
+console.log(evalExpr(exprExample.ast));
