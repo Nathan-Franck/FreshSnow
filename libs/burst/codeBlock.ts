@@ -123,44 +123,44 @@ const mathOps = <const>{
 type MathOps = typeof mathOps;
 
 type CastIfGeneric<TypesOrGeneric extends Types | 'T', T> = TypesOrGeneric extends 'T' ? T : TypesOrGeneric;
-
-type thinger = CastIfGeneric<MathOps['div']["returnType"], 'float'>;
-
-export type Expr<T extends Types> = { [key in keyof MathOps as MathOps[key] extends { validTypes: infer VT }
+export type Expr<T extends Types> = {
+    [key in keyof MathOps as MathOps[key] extends { validTypes: infer VT }
     ? T extends VT[keyof VT]
     ? key
     : never
-    : never]: (...args: Parameters<MathOps[key]["glslCode"]> extends [any, ...infer Rest] ? ConvertTuple<Rest, Expr<T>> : never) => Expr<CastIfGeneric<MathOps[key]["returnType"], T>> }
-    & { type: T, ast: any };
+    : never]: (...args: Parameters<MathOps[key]["glslCode"]> extends [any, ...infer Rest]
+        ? ConvertTuple<Rest, Expr<T>>
+        : never) =>
+        Expr<CastIfGeneric<MathOps[key]["returnType"], T>>
+} & { ast: any, type: T, combine: Combiner<TypeBlueprints[T]>["combine"] };
 
 export function expr<T extends Types>(type: T, ast: any) {
     // Get all math ops that are valid for this type
     const ops = fromEntries(toKeys(mathOps)
-        /*@ts-ignore*/
-        .map(op => ([op, (...args: Expr<any>[]) => expr(mathOps[op].returnType(...[type].concat(args.map(a => a.type))), {
-            op,
-            args: [ast, ...args.map(a => a.ast)],
-        })])));
+        .map(op => (
+            [op, (...args: Expr<any>[]) => {
+                const returnType = mathOps[op].returnType;
+                return expr(
+                    returnType == 'T' ? type : returnType,
+                    {
+                        op,
+                        args: [ast, ...args.map(a => a.ast)],
+                    }
+                );
+            }])));
 
     return {
         ...ops,
         type,
         ast,
-    } as any as Expr<T>;
+        combine: <U extends Types>(other: Expr<U>) => {
+            return new Combiner(typeBlueprints[type], ast).combine(other);
+        },
+        aggregate: new Aggregator(expr(,
+    } as Expr<T>;
 
-    // combine<U extends Types>(other: Expr<U>) {
-    //     return new Combiner(typeBlueprints[this.type], this.code).combine(other);
-    // }
-    // aggregate<U>(
-    //     elements: readonly U[],
-    //     func: (previous: Expr<T>, elem: U, index: number) => Expr<T>
-    // ): Expr<T> {
-    //     var statement = this as Expr<T>;
-    //     for (let i = 0; i < elements.length; i++) {
-    //         statement = func(statement, elements[i], i);
-    //     }
-    //     return statement;
-    // }
+    // 
+
 }
 
 export function evalExpr(ast: any) {
@@ -171,44 +171,29 @@ export function evalExpr(ast: any) {
     return op.glslCode(...ast.args.map(evalExpr));
 }
 
-// class Combiner<Blueprint extends readonly number[]> {
-//     constructor(private blueprint: Blueprint, public code: string) { }
-//     combine<U extends Types>(other: Expr<U>) {
-//         return new Combiner(<const>[...this.blueprint, ...typeBlueprints[other.type]], `${this.code}, ${other.code}`);
-//     }
-//     as<U extends keyof { [key in Types as TypeBlueprints[key] extends Blueprint ? key : never]: true }>(type: U): Expr<U> {
-//         return new Expr(type, `${type}(${this.code})`);
-//     }
-// }
+class Combiner<Blueprint extends readonly number[]> {
+    constructor(private blueprint: Blueprint, public ast: any) { }
+    combine<U extends Types>(other: Expr<U>) {
+        return new Combiner(<const>[...this.blueprint, ...typeBlueprints[other.type]], [...(Array.isArray(this.ast) ? this.ast : [this.ast]), other.ast]);
+    }
+    as<U extends keyof { [key in Types as TypeBlueprints[key] extends Blueprint ? key : never]: true }>(type: U): Expr<U> {
+        return expr(type, { op: type, args: this.ast });
+    }
+}
 
-// class Value<T extends Types> extends Expr<T> {
-//     constructor(type: T, ...args: ConvertTuple<TypeBlueprints[T], Expr<'float'>>) {
-//         super(type, `${type}(${args.map(arg => arg.code).join(', ')})`);
-//     }
-// }
-
-// class Const<T extends Types> extends Expr<T> {
-//     constructor(
-//         type: T,
-//         ...values: ConvertTuple<TypeBlueprints[T], number>
-//     ) {
-//         if (values.length == 1) {
-//             super(type, Const.numberToFloatLiteral(values[0]));
-//         }
-//         else {
-//             super(type, `${type}(${values.map(value => Const.numberToFloatLiteral(value)).join(', ')})`);
-//         }
-//     }
-
-//     static numberToFloatLiteral(value: number) {
-//         var string = value.toString();
-//         if (string.indexOf('.') == -1) {
-//             string += '.0';
-//         }
-//         return string;
-//     }
-// }
-
+class Aggregator<T extends Types> {
+    constructor(private expr: Expr<T>) { }
+    aggregate<U>(
+        elements: readonly U[],
+        func: (previous: Expr<T>, elem: U, index: number) => Expr<T>
+    ) {
+        var statement = this.expr;
+        for (let i = 0; i < elements.length; i++) {
+            statement = func(statement, elements[i], i);
+        }
+        return statement;
+    }
+}
 // export class CodeBlock<Scope extends Record<string, any> = {}> {
 //     constructor(public scope: Scope = {} as Scope, public code: string = '') { }
 //     define<T extends Record<string, Expr<Types>>>(
@@ -240,7 +225,6 @@ function codeblock<Scope extends Record<string, any> = {}>(scope: Scope = {} as 
             const newScope = <const>{
                 ...this.scope,
                 ...fromEntries(entries.map(([key, value]) =>
-
                     [key, expr(value.type, key as string)]))
             };
             const newCode = entries.reduce((code, [name, statement]) => {
@@ -278,7 +262,7 @@ function constant<T extends Types>(type: T, ...values: ConvertTuple<TypeBlueprin
 }
 
 function value<T extends Types>(type: T, ...args: ConvertTuple<TypeBlueprints[T], Expr<'float'>>) {
-    return expr(type, `${type}(${args.map(arg => arg.code).join(', ')})`);
+    return expr(type, { op: type, args: args.map(arg => arg.ast) });
 }
 
 
@@ -305,14 +289,14 @@ export function test() {
             lotsaMaths: $.second.add($.second).mul($.onePointFive).neg(),
         }))
         .define($ => ({
-            // aggregationExample: Const('vec2', 0, 0)
-            //     .aggregate(searchDirections, (previous, direction) =>
-            //         previous.mul(Const('vec2', ...direction))),
+            aggregationExample: constant('vec2', 0, 0)
+                .aggregate(searchDirections, (previous, direction) =>
+                    previous.mul(constant('vec2', ...direction))),
             vec3Example: value('vec3', $.first, $.second, constant('float', 0)),
             mat2Example: value('mat2', $.first, $.second, $.onePointFive, $.lotsaMaths),
         }))
         .define($ => ({
-            result: $.vec3Example,
+            result: $.vec3Example.combine($.second).as('vec4'),
         }))
         .code);
 }
