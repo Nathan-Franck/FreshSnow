@@ -1,5 +1,5 @@
 import { mapObject } from '../utils';
-import { CodeBlock, Expr, Types } from './codeBlock';
+import { CodeBlock, ExprBuilder, Types } from './codeBlock';
 
 export class VertFrag<
     Attributes extends Record<string, Types>,
@@ -11,11 +11,11 @@ export class VertFrag<
         attributes: Attributes,
         uniforms: Uniforms,
         declareBody: (body: CodeBlock<ExprRecord<Attributes> & ExprRecord<Uniforms>>) =>
-            CodeBlock<{ returns: Expr<Returns> }>
+            CodeBlock<{ returns: ExprBuilder<Returns> }>
     ) {
         const scope: ExprRecord<Attributes> & ExprRecord<Uniforms> = {
-            ...mapObject(attributes, (value, key) => new Expr(value, key as string)) as ExprRecord<Attributes>,
-            ...mapObject(uniforms, (value, key) => new Expr(value, key as string)) as ExprRecord<Uniforms>,
+            ...mapObject(attributes, (value, key) => new ExprBuilder(value, key as string)) as ExprRecord<Attributes>,
+            ...mapObject(uniforms, (value, key) => new ExprBuilder(value, key as string)) as ExprRecord<Uniforms>,
         };
         const body = declareBody(new CodeBlock(scope, ''));
         const attributeCode = Object.entries(attributes).map(([name, type]) => `attribute ${type} ${name}`).join(';\n');
@@ -27,7 +27,7 @@ export class VertFrag<
     }
 }
 
-type ExprRecord<T extends Record<string, Types>> = { [key in keyof T]: Expr<T[key]> };
+type ExprRecord<T extends Record<string, Types>> = { [key in keyof T]: ExprBuilder<T[key]> };
 
 // Living example.
 
