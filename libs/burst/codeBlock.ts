@@ -12,240 +12,246 @@ const typeBlueprints = <const>{
 type TypeBlueprints = typeof typeBlueprints;
 export type Types = keyof typeof typeBlueprints;
 
-export class ExprBuilder<T extends Types> {
-    constructor(public type: T, public code: string) { }
+export type ValidMethods = {
+    float: 'add' | 'sub' | 'mul' | 'div' | 'neg' | 'dot' | 'mix' | 'step' | 'smoothstep' | 'length' | 'distance' | 'normalize' | 'faceforward' | 'reflect' | 'refract' | 'abs' | 'sign' | 'floor' | 'ceil' | 'fract' | 'sqrt' | 'inversesqrt' | 'exp' | 'log' | 'exp2' | 'log2' | 'sin' | 'cos' | 'tan' | 'asin' | 'acos' | 'atan' | 'atan2'
+    | "mod" | "min" | "max" | "pow" | "lessThan" | "lessThanEqual" | "greaterThan" | "greaterThanEqual" | "equal",
+    vec2: 'add' | 'sub' | 'mul' | 'div' | 'neg' | 'dot' | 'mix' | 'step' | 'smoothstep' | 'length' | 'distance' | 'normalize' | 'faceforward' | 'reflect' | 'refract' | 'abs' | 'sign' | 'floor' | 'ceil' | 'fract' | 'sqrt' | 'inversesqrt' | 'exp' | 'log' | 'exp2' | 'log2' | 'sin' | 'cos' | 'tan' | 'asin' | 'acos' | 'atan' | 'atan2'
+    | "mod" | "min" | "max" | "pow" | "lessThan" | "lessThanEqual" | "greaterThan" | "greaterThanEqual" | "equal",
+    vec3: 'add' | 'sub' | 'mul' | 'div' | 'neg' | 'dot' | 'mix' | 'step' | 'smoothstep' | 'length' | 'distance' | 'normalize' | 'faceforward' | 'reflect' | 'refract' | 'abs' | 'sign' | 'floor' | 'ceil' | 'fract' | 'sqrt' | 'inversesqrt' | 'exp' | 'log' | 'exp2' | 'log2' | 'sin' | 'cos' | 'tan' | 'asin' | 'acos' | 'atan' | 'atan2'
+    | 'cross' | "mod" | "min" | "max" | "pow" | "lessThan" | "lessThanEqual" | "greaterThan" | "greaterThanEqual" | "equal",
+    vec4: 'add' | 'sub' | 'mul' | 'div' | 'neg' | 'dot' | 'mix' | 'step' | 'smoothstep' | 'length' | 'distance' | 'normalize' | 'faceforward' | 'reflect' | 'refract' | 'abs' | 'sign' | 'floor' | 'ceil' | 'fract' | 'sqrt' | 'inversesqrt' | 'exp' | 'log' | 'exp2' | 'log2' | 'sin' | 'cos' | 'tan' | 'asin' | 'acos' | 'atan' | 'atan2',
+    mat2: 'add' | 'sub' | 'mul' | 'div' | 'neg' | 'mix' | 'step' | 'smoothstep' | 'abs' | 'sign' | 'floor' | 'ceil' | 'fract' | 'sqrt' | 'inversesqrt' | 'exp' | 'log' | 'exp2' | 'log2' | 'sin' | 'cos' | 'tan' | 'asin' | 'acos' | 'atan' | 'atan2' | "matrixCompMult",
+    mat3: 'add' | 'sub' | 'mul' | 'div' | 'neg' | "matrixCompMult",
+    mat4: 'add' | 'sub' | 'mul' | 'div' | 'neg' | "matrixCompMult",
+};
+
+function ClassEG() {
+    this.thinger = function() {
+        return 1;
+    }
+    this.a = 37;
+}
+
+export class ExprBuilderAST<T extends Types> {
+    constructor(public type: T, public ast: any) { }
     /** https://thebookofshaders.com/glossary/?search=add */
-    add(other: Expr<T>): Expr<T> {
-        return new ExprBuilder(this.type, `(${this.code}) + ${other.code}`);
+    add(other: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'add', props: [this.ast, other.ast] });
     }
     /** https://thebookofshaders.com/glossary/?search=sub */
-    sub(other: Expr<T>): Expr<T> {
-        return new ExprBuilder(this.type, `(${this.code}) - ${other.code}`);
+    sub(other: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'sub', props: [this.ast, other.ast] });
     }
     /** https://thebookofshaders.com/glossary/?search=mul */
-    mul(other: Expr<T>): Expr<T> {
-        return new ExprBuilder(this.type, `(${this.code}) * ${other.code}`);
+    mul(other: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'mul', props: [this.ast, other.ast] });
     }
     /** https://thebookofshaders.com/glossary/?search=div */
-    div(other: Expr<T>): Expr<T> {
-        return new ExprBuilder(this.type, `(${this.code}) / ${other.code}`);
+    div(other: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'div', props: [this.ast, other.ast] });
     }
     /** https://thebookofshaders.com/glossary/?search=neg */
-    neg(): Expr<T> {
-        return new ExprBuilder(this.type, `-(${this.code})`);
-    }
-    /** https://thebookofshaders.com/glossary/?search=mod */
-    mod(other: Expr<T>): Expr<T> {
-        return new ExprBuilder(this.type, `mod(${this.code}, ${other.code})`);
-    }
-    /** https://thebookofshaders.com/glossary/?search=pow */
-    pow(other: Expr<T>): Expr<T> {
-        return new ExprBuilder(this.type, `pow(${this.code}, ${other.code})`);
+    neg(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'neg', props: [this.ast] });
     }
     /** https://thebookofshaders.com/glossary/?search=dot */
-    dot(other: Expr<T>): Expr<'float'> {
-        return new ExprBuilder('float', `dot(${this.code}, ${other.code})`);
-    }
-    /** https://thebookofshaders.com/glossary/?search=cross */
-    cross(other: Expr<T>): Expr<T> {
-        return new ExprBuilder(this.type, `cross(${this.code}, ${other.code})`);
-    }
-    /** https://thebookofshaders.com/glossary/?search=min */
-    min(other: Expr<T>): Expr<T> {
-        return new ExprBuilder(this.type, `min(${this.code}, ${other.code})`);
-    }
-    /** https://thebookofshaders.com/glossary/?search=max */
-    max(other: Expr<T>): Expr<T> {
-        return new ExprBuilder(this.type, `max(${this.code}, ${other.code})`);
-    }
-    /** https://thebookofshaders.com/glossary/?search=clamp */
-    clamp(min: Expr<T>, max: Expr<T>): Expr<T> {
-        return new ExprBuilder(this.type, `clamp(${this.code}, ${min.code}, ${max.code})`);
+    dot(other: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'dot', props: [this.ast, other.ast] });
     }
     /** https://thebookofshaders.com/glossary/?search=mix */
-    mix(other: Expr<T>, factor: Expr<'float'>): Expr<T> {
-        return new ExprBuilder(this.type, `mix(${this.code}, ${other.code}, ${factor.code})`);
+    mix(other: ExprAST<T>, amount: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'mix', props: [this.ast, other.ast, amount.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=step */
-    step(edge: Expr<T>): Expr<T> {
-        return new ExprBuilder(this.type, `step(${edge.code}, ${this.code})`);
+    step(edge: ExprAST<T>, x: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'step', props: [edge.ast, x.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=smoothstep */
-    smoothstep(edge0: Expr<T>, edge1: Expr<T>): Expr<T> {
-        return new ExprBuilder(this.type, `smoothstep(${edge0.code}, ${edge1.code}, ${this.code})`);
+    smoothstep(edge0: ExprAST<T>, edge1: ExprAST<T>, x: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'smoothstep', props: [edge0.ast, edge1.ast, x.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=length */
-    length(): Expr<'float'> {
-        return new ExprBuilder('float', `length(${this.code})`);
+    length(): ExprAST<'float'> {
+        return new ExprBuilderAST('float', { func: 'length', props: [this.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=distance */
-    distance(other: Expr<T>): Expr<'float'> {
-        return new ExprBuilder('float', `distance(${this.code}, ${other.code})`);
+    distance(other: ExprAST<T>): ExprAST<'float'> {
+        return new ExprBuilderAST('float', { func: 'distance', props: [this.ast, other.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=normalize */
-    normalize(): Expr<T> {
-        return new ExprBuilder(this.type, `normalize(${this.code})`);
+    normalize(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'normalize', props: [this.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=faceforward */
-    faceforward(other: Expr<T>): Expr<T> {
-        return new ExprBuilder(this.type, `faceforward(${this.code}, ${other.code})`);
+    faceforward(N: ExprAST<T>, I: ExprAST<T>, Nref: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'faceforward', props: [N.ast, I.ast, Nref.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=reflect */
-    reflect(other: Expr<T>): Expr<T> {
-        return new ExprBuilder(this.type, `reflect(${this.code}, ${other.code})`);
+    reflect(I: ExprAST<T>, N: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'reflect', props: [I.ast, N.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=refract */
-    refract(other: Expr<T>, eta: Expr<'float'>): Expr<T> {
-        return new ExprBuilder(this.type, `refract(${this.code}, ${other.code}, ${eta.code})`);
+    refract(I: ExprAST<T>, N: ExprAST<T>, eta: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'refract', props: [I.ast, N.ast, eta.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=abs */
-    abs(): Expr<T> {
-        return new ExprBuilder(this.type, `abs(${this.code})`);
+    abs(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'abs', props: [this.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=sign */
-    sign(): Expr<T> {
-        return new ExprBuilder(this.type, `sign(${this.code})`);
+    sign(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'sign', props: [this.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=floor */
-    floor(): Expr<T> {
-        return new ExprBuilder(this.type, `floor(${this.code})`);
+    floor(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'floor', props: [this.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=ceil */
-    ceil(): Expr<T> {
-        return new ExprBuilder(this.type, `ceil(${this.code})`);
+    ceil(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'ceil', props: [this.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=fract */
-    fract(): Expr<T> {
-        return new ExprBuilder(this.type, `fract(${this.code})`);
+    fract(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'fract', props: [this.ast] });
     }
-    
-    /** https://thebookofshaders.com/glossary/?search=sqrt */
-    sqrt(): Expr<T> {
-        return new ExprBuilder(this.type, `sqrt(${this.code})`);
+    /** https://thebookofshaders.com/glossary/?search=mod */
+    mod(other: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'mod', props: [this.ast, other.ast] });
     }
-    
-    /** https://thebookofshaders.com/glossary/?search=inversesqrt */
-    inversesqrt(): Expr<T> {
-        return new ExprBuilder(this.type, `inversesqrt(${this.code})`);
+    /** https://thebookofshaders.com/glossary/?search=min */
+    min(other: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'min', props: [this.ast, other.ast] });
     }
-    
+    /** https://thebookofshaders.com/glossary/?search=max */
+    max(other: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'max', props: [this.ast, other.ast] });
+    }
+    /** https://thebookofshaders.com/glossary/?search=pow */
+    pow(other: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'pow', props: [this.ast, other.ast] });
+    }
     /** https://thebookofshaders.com/glossary/?search=exp */
-    exp(): Expr<T> {
-        return new ExprBuilder(this.type, `exp(${this.code})`);
+    exp(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'exp', props: [this.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=log */
-    log(): Expr<T> {
-        return new ExprBuilder(this.type, `log(${this.code})`);
+    log(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'log', props: [this.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=exp2 */
-    exp2(): Expr<T> {
-        return new ExprBuilder(this.type, `exp2(${this.code})`);
+    exp2(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'exp2', props: [this.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=log2 */
-    log2(): Expr<T> {
-        return new ExprBuilder(this.type, `log2(${this.code})`);
+    log2(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'log2', props: [this.ast] });
     }
-    
-    /** https://thebookofshaders.com/glossary/?search=sin */
-    sin(): Expr<T> {
-        return new ExprBuilder(this.type, `sin(${this.code})`);
+    /** https://thebookofshaders.com/glossary/?search=sqrt */
+    sqrt(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'sqrt', props: [this.ast] });
     }
-    
+    /** https://thebookofshaders.com/glossary/?search=inversesqrt */
+    inversesqrt(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'inversesqrt', props: [this.ast] });
+    }
+    /** https://thebookofshaders.com/glossary/?search=cross */
+    cross(other: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'cross', props: [this.ast, other.ast] });
+    }
+    /** https://thebookofshaders.com/glossary/?search=matrixCompMult */
+    matrixCompMult(other: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'matrixCompMult', props: [this.ast, other.ast] });
+    }
+    /** https://thebookofshaders.com/glossary/?search=lessThan */
+    lessThan(other: ExprAST<T>): ExprAST<'float'> {
+        return new ExprBuilderAST('float', { func: 'lessThan', props: [this.ast, other.ast] });
+    }
+    /** https://thebookofshaders.com/glossary/?search=lessThanEqual */
+    lessThanEqual(other: ExprAST<T>): ExprAST<'float'> {
+        return new ExprBuilderAST('float', { func: 'lessThanEqual', props: [this.ast, other.ast] });
+    }
+    /** https://thebookofshaders.com/glossary/?search=greaterThan */
+    greaterThan(other: ExprAST<T>): ExprAST<'float'> {
+        return new ExprBuilderAST('float', { func: 'greaterThan', props: [this.ast, other.ast] });
+    }
+    /** https://thebookofshaders.com/glossary/?search=greaterThanEqual */
+    greaterThanEqual(other: ExprAST<T>): ExprAST<'float'> {
+        return new ExprBuilderAST('float', { func: 'greaterThanEqual', props: [this.ast, other.ast] });
+    }
+    /** https://thebookofshaders.com/glossary/?search=equal */
+    equal(other: ExprAST<T>): ExprAST<'float'> {
+        return new ExprBuilderAST('float', { func: 'equal', props: [this.ast, other.ast] });
+    }
+    /** https://thebookofshaders.com/glossary/?search=notEqual */
+    sin(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'sin', props: [this.ast] });
+    }
     /** https://thebookofshaders.com/glossary/?search=cos */
-    cos(): Expr<T> {
-        return new ExprBuilder(this.type, `cos(${this.code})`);
+    cos(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'cos', props: [this.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=tan */
-    tan(): Expr<T> {
-        return new ExprBuilder(this.type, `tan(${this.code})`);
+    tan(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'tan', props: [this.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=asin */
-    asin(): Expr<T> {
-        return new ExprBuilder(this.type, `asin(${this.code})`);
+    asin(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'asin', props: [this.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=acos */
-    acos(): Expr<T> {
-        return new ExprBuilder(this.type, `acos(${this.code})`);
+    acos(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'acos', props: [this.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=atan */
-    atan(): Expr<T> {
-        return new ExprBuilder(this.type, `atan(${this.code})`);
+    atan(): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'atan', props: [this.ast] });
     }
-    
     /** https://thebookofshaders.com/glossary/?search=atan2 */
-    atan2(other: Expr<T>): Expr<T> {
-        return new ExprBuilder(this.type, `atan(${this.code}, ${other.code})`);
+    atan2(other: ExprAST<T>): ExprAST<T> {
+        return new ExprBuilderAST(this.type, { func: 'atan2', props: [this.ast, other.ast] });
     }
-    combine<U extends Types>(other: Expr<U>) {
-        return new Combiner(typeBlueprints[this.type], this.code).combine(other);
+    combine<U extends Types>(other: ExprAST<U>) {
+        return new Combiner(typeBlueprints[this.type], this.ast).combine(other);
     }
     aggregate<U>(
         elements: readonly U[],
-        func: (previous: Expr<T>, elem: U, index: number) => Expr<T>
-    ): Expr<T> {
-        var statement = this as Expr<T>;
+        func: (previous: ExprAST<T>, elem: U, index: number) => ExprAST<T>
+    ): ExprAST<T> {
+        var statement = this as ExprAST<T>;
         for (let i = 0; i < elements.length; i++) {
             statement = func(statement, elements[i], i);
         }
         return statement;
     }
 }
-export type ValidMethods = {
-    float: 'add' | 'sub' | 'mul' | 'div' | 'neg' | 'dot' | 'mix' | 'step' | 'smoothstep' | 'length' | 'distance' | 'normalize' | 'faceforward' | 'reflect' | 'refract' | 'abs' | 'sign' | 'floor' | 'ceil' | 'fract' | 'sqrt' | 'inversesqrt' | 'exp' | 'log' | 'exp2' | 'log2' | 'sin' | 'cos' | 'tan' | 'asin' | 'acos' | 'atan' | 'atan2',
-    vec2: 'add' | 'sub' | 'mul' | 'div' | 'neg' | 'dot' | 'mix' | 'step' | 'smoothstep' | 'length' | 'distance' | 'normalize' | 'faceforward' | 'reflect' | 'refract' | 'abs' | 'sign' | 'floor' | 'ceil' | 'fract' | 'sqrt' | 'inversesqrt' | 'exp' | 'log' | 'exp2' | 'log2' | 'sin' | 'cos' | 'tan' | 'asin' | 'acos' | 'atan' | 'atan2',
-    vec3: 'add' | 'sub' | 'mul' | 'div' | 'neg' | 'dot' | 'mix' | 'step' | 'smoothstep' | 'length' | 'distance' | 'normalize' | 'faceforward' | 'reflect' | 'refract' | 'abs' | 'sign' | 'floor' | 'ceil' | 'fract' | 'sqrt' | 'inversesqrt' | 'exp' | 'log' | 'exp2' | 'log2' | 'sin' | 'cos' | 'tan' | 'asin' | 'acos' | 'atan' | 'atan2',
-    vec4: 'add' | 'sub' | 'mul' | 'div' | 'neg' | 'dot' | 'mix' | 'step' | 'smoothstep' | 'length' | 'distance' | 'normalize' | 'faceforward' | 'reflect' | 'refract' | 'abs' | 'sign' | 'floor' | 'ceil' | 'fract' | 'sqrt' | 'inversesqrt' | 'exp' | 'log' | 'exp2' | 'log2' | 'sin' | 'cos' | 'tan' | 'asin' | 'acos' | 'atan' | 'atan2',
-    mat2: 'add' | 'sub' | 'mul' | 'div' | 'neg' | 'mix' | 'step' | 'smoothstep' |  'abs' | 'sign' | 'floor' | 'ceil' | 'fract' | 'sqrt' | 'inversesqrt' | 'exp' | 'log' | 'exp2' | 'log2' | 'sin' | 'cos' | 'tan' | 'asin' | 'acos' | 'atan' | 'atan2',
-    mat3: 'add' | 'sub' | 'mul' | 'div' | 'neg',
-    mat4: 'add' | 'sub' | 'mul' | 'div' | 'neg',
-};
 
-export type Expr<T extends Types> = Pick<ExprBuilder<T>, ValidMethods[T] | 'combine' | 'aggregate' | 'code' | 'type'>;
+export type ExprAST<T extends Types> = Pick<ExprBuilderAST<T>, ValidMethods[T] | 'combine' | 'aggregate' | 'ast' | 'type'>;
+export type TestForCoverage = Exclude<keyof ExprBuilderAST<'vec3'>, ValidMethods['vec3'] | 'combine' | 'aggregate' | 'ast' | 'type'>;
 
 class Combiner<Blueprint extends readonly number[]> {
-    constructor(private blueprint: Blueprint, public code: string) { }
-    combine<U extends Types>(other: Expr<U>) {
-        return new Combiner(<const>[...this.blueprint, ...typeBlueprints[other.type]], `${this.code}, ${other.code}`);
+    constructor(private blueprint: Blueprint, public ast: any) { }
+    combine<U extends Types>(other: ExprAST<U>) {
+        return new Combiner(<const>[...this.blueprint, ...typeBlueprints[other.type]], [...(Array.isArray(this.ast) ? this.ast : [this.ast]), other.ast]);
     }
-    as<U extends keyof { [key in Types as TypeBlueprints[key] extends Blueprint ? key : never]: true }>(type: U): Expr<U> {
-        return new ExprBuilder(type, `${type}(${this.code})`);
+    as<U extends keyof { [key in Types as TypeBlueprints[key] extends Blueprint ? key : never]: true }>(type: U): ExprAST<U> {
+        return new ExprBuilderAST(type, { func: type, props: this.ast });
     }
 }
 
 namespace Block {
-    export function value<T extends Types>(type: T, ...args: ConvertTuple<TypeBlueprints[T], Expr<'float'>>): Expr<T> {
-        return new ExprBuilder(type, `${type}(${args.map(arg => arg.code).join(', ')})`);
+    export function value<T extends Types>(type: T, ...args: ConvertTuple<TypeBlueprints[T], ExprAST<'float'>>): ExprAST<T> {
+        return new ExprBuilderAST(type, `${type}(${args.map(arg => arg.ast).join(', ')})`);
     }
 
     export function literal<T extends Types>(
         type: T,
         ...values: ConvertTuple<TypeBlueprints[T], number>
-    ): Expr<T> {
+    ): ExprAST<T> {
         if (values.length == 1) {
-            return new ExprBuilder(type, numberToFloatLiteral(values[0]));
+            return new ExprBuilderAST(type, numberToFloatLiteral(values[0]));
         }
         else {
-            return new ExprBuilder(type, `${type}(${values.map(value => numberToFloatLiteral(value)).join(', ')})`);
+            return new ExprBuilderAST(type, `${type}(${values.map(value => numberToFloatLiteral(value)).join(', ')})`);
         }
     }
 
@@ -259,7 +265,7 @@ namespace Block {
 }
 export class CodeBlock<Scope extends Record<string, any> = {}> {
     constructor(public scope: Scope = {} as Scope, public code: string = '') { }
-    define<T extends Record<string, { [key in Types]: Expr<key> }[Types]>>(
+    define<T extends Record<string, { [key in Types]: ExprAST<key> }[Types]>>(
         func: (scope: { [key in keyof Scope]: Scope[key] }) => T
     ): CodeBlock<Scope & T> {
         const statements = func(this.scope);
@@ -267,10 +273,10 @@ export class CodeBlock<Scope extends Record<string, any> = {}> {
         const newScope = <const>{
             ...this.scope,
             ...fromEntries(entries.map(([key, value]) =>
-                [key, new ExprBuilder(value.type, key as string)]))
+                [key, new ExprBuilderAST(value.type, key as string)]))
         };
         const newCode = entries.reduce((code, [name, statement]) => {
-            return `${code}\n\t${statement.type} ${name as any} = ${statement.code};`;
+            return `${code}\n\t${statement.type} ${name as any} = ${statement.ast};`;
         }, this.code);
         return new CodeBlock(newScope as any, newCode) as any;
     }
