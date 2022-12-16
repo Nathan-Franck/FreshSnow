@@ -198,7 +198,7 @@ function combiner<Blueprint extends readonly number[]>(blueprint: Blueprint, ast
 type CodeBlock<Scope extends Record<string, any> = {}> = {
     scope: Scope;
     ast: AST;
-    define<T extends Record<string, { [key in Types]: Expr<key> }[Types]>>(
+    define<T extends Record<string, { ast: AST, type: string }>>(
         func: (scope: { [key in keyof Scope]: Scope[key] }) => T
     ): CodeBlock<Scope & T>;
 }
@@ -212,7 +212,7 @@ function codeblock<Scope extends Record<string, any> = {}>(scope: Scope = {} as 
             const newScope = <const>{
                 ...this.scope,
                 ...fromEntries(entries.map(([key, value]) =>
-                    [key, expr(value.type, key as any as AST)]))
+                    [key, { ...value, ast: key }]))
             };
             const newAst = [...ast, ...entries.map(([key, value]) => ({ op: '=', left: `${value.type} ${key as string}`, right: value.ast }))];
             return codeblock(newScope as any, newAst) as any;
