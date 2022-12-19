@@ -1,6 +1,6 @@
-import { ConvertTuple, fromEntries, mapObject, toEntries, toKeys } from '../utils';
+import { ConvertTuple, fromEntries, mapObject, toEntries, toKeys, TuplifyUnion } from '../utils';
 
-const typeBlueprints = <const>{
+const mathTypeBlueprints = <const>{
     float: [0],
     vec2: [0, 0],
     vec3: [0, 0, 0],
@@ -9,12 +9,12 @@ const typeBlueprints = <const>{
     mat3: [0, 0, 0, 0, 0, 0, 0, 0, 0],
     mat4: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 };
-type TypeBlueprints = typeof typeBlueprints;
-export type Types = keyof typeof typeBlueprints;
+type MathTypeBlueprints = typeof mathTypeBlueprints;
+export type MathTypes = keyof typeof mathTypeBlueprints;
 
-type ExprType<T extends Types> = { type: T };
+type ExprType<T extends string> = { type: T };
 
-const mathOps = <T extends Types>(type: T) => <const>{
+const mathOps = <T extends MathTypes>(type: T) => <const>{
     add: {
         validTypes: ['float', 'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4'],
         dyadicSymbol: '+',
@@ -131,69 +131,26 @@ type MathOpsTypes = 'float' | 'vec2' | 'vec3' | 'vec4' | 'mat2' | 'mat3' | 'mat4
 type ValidExpr = { [T in MathOpsTypes]: keyof {
     [key in keyof ReturnType<typeof mathOps<T>> as T extends ReturnType<typeof mathOps<T>>[key]['validTypes'][number] ? key : never]: true
 } };
-type MathOpToFunc<T extends Types, mathOp extends keyof ReturnType<typeof mathOps<T>>> = (...args: Parameters<ReturnType<typeof mathOps<T>>[mathOp]["method"]>) =>
-    Expr<ReturnType<ReturnType<typeof mathOps<T>>[mathOp]["method"]>>;
-type ExprExtensionMethods<T extends Types> = {
-    ast: any,
-    type: T,
-    combine: Combiner<TypeBlueprints[T]>["combine"],
-    aggregate: <U>(elements: readonly U[], func: (previous: Expr<T>, elem: U, index: number) => any) => Expr<T>
+type MathOpToFunc<T extends MathTypes, mathOp extends keyof ReturnType<typeof mathOps<T>>> = (...args: Parameters<ReturnType<typeof mathOps<T>>[mathOp]["method"]>) =>
+    MathExpr<ReturnType<ReturnType<typeof mathOps<T>>[mathOp]["method"]>>;
+type ExprExtensionMethods<T extends MathTypes> = {
+    combine: Combiner<MathTypeBlueprints[T]>["combine"],
+    aggregate: <U>(elements: readonly U[], func: (previous: MathExpr<T>, elem: U, index: number) => any) => MathExpr<T>
 };
-type ExprValidOps<T extends Types> = Pick<{ [mathOp in keyof ReturnType<typeof mathOps<T>>]: MathOpToFunc<T, mathOp> }, ValidExpr[T]>;
+type ExprValidOps<T extends MathTypes> = Pick<{ [mathOp in keyof ReturnType<typeof mathOps<T>>]: MathOpToFunc<T, mathOp> }, ValidExpr[T]>;
 
-export type Expr<T extends Types> =
+export type MathExpr<T extends MathTypes> =
     & ExprValidOps<T>
     & ExprExtensionMethods<T>;
 
-export function expr<T extends Types>(type: T, ast: AST): Expr<T> {
-    const extensionMethods: ExprExtensionMethods<T> = {
-        type,
-        ast,
-        combine: function (other) {
-            return combiner(typeBlueprints[type], ast).combine(other);
-        },
-        aggregate: function (
-            elements,
-            func,
-        ) {
-            var statement = this as Expr<T>;
-            for (let i = 0; i < elements.length; i++) {
-                statement = func(statement, elements[i], i);
-            }
-            return statement;
-        },
-    };
-    const mathOpsForType = mathOps(type);
-    const validOps: ExprValidOps<T> = fromEntries(toKeys(mathOpsForType)
-        .map(key => (
-            [key, (...args: Expr<any>[]) => {
-                const op = mathOpsForType[key];
-                /** @ts-ignore */
-                const returnType = op.method();
-                const newAst =
-                    'dyadicSymbol' in op ? { op: op.dyadicSymbol, left: ast, right: args[0].ast }
-                        : 'monadicSymbol' in op ? { op: op.monadicSymbol, inner: ast }
-                            : { op: key, args: [ast, ...args.map(a => a.ast)] };
-                return expr(returnType, newAst);
-            }]))) as any;
-    return {
-        ...validOps,
-        ...extensionMethods,
-    };
-}
+type AnyMathExpr = { [T in MathTypes]: MathExpr<T> };
 
 type AST = { op: string, args: AST[] } | { op: string, inner: AST } | { op: string, left: AST, right: AST } | AST[] | string;
 
 type Combiner<Blueprint extends readonly number[]> = {
-    combine: <U extends Types>(other: Expr<U>) => Combiner<readonly [...Blueprint, ...TypeBlueprints[U]]>,
-    as: <U extends keyof { [key in Types as TypeBlueprints[key] extends Blueprint ? key : never]: true }>(type: U) => Expr<U>;
+    combine: <U extends MathTypes>(other: MathExpr<U>) => Combiner<readonly [...Blueprint, ...MathTypeBlueprints[U]]>,
+    as: <U extends keyof { [key in MathTypes as MathTypeBlueprints[key] extends Blueprint ? key : never]: true }>(type: U) => MathExpr<U>;
 };
-function combiner<Blueprint extends readonly number[]>(blueprint: Blueprint, ast: AST): Combiner<Blueprint> {
-    return {
-        combine: (other) => combiner(<const>[...blueprint, ...typeBlueprints[other.type]], [...(Array.isArray(ast) ? ast : [ast]), other.ast]),
-        as: (type) => expr(type, { op: type, args: Array.isArray(ast) ? ast : [ast] }),
-    };
-}
 
 type CodeBlock<Scope extends Record<string, any> = {}> = {
     scope: Scope;
@@ -253,10 +210,57 @@ function numberToFloatLiteral(value: number) {
     return string;
 }
 
-function value<T extends Types>(type: T, ...values: [number | Expr<'float'>] | ConvertTuple<TypeBlueprints[T], number | Expr<'float'>>) {
-    return expr(type, { op: type, args: values.map(value => typeof value == 'number' ? numberToFloatLiteral(value) : value.ast) });
+function impl<Exprs extends Record<string, any>>(allCallables: Record<keyof Exprs[keyof Exprs], true>) {
+    function withBlueprints<BP extends Record<keyof Exprs, readonly string[]>>(blueprints: BP) {
+
+        type ConvertTuple<T> = T extends readonly [infer A, ...infer B]
+            ? A extends string
+            ? A extends "float"
+            ? readonly [number | ExprType<A>, ...ConvertTuple<B>]
+            : readonly [ExprType<A>, ...ConvertTuple<B>]
+            : [] : [];
+
+        function value<T extends keyof Exprs & string>(type: T, ...values: ConvertTuple<BP[T]>): ExprType<T> {
+            return { type, ast: { op: type, args: values.map(value => typeof value == 'number' ? numberToFloatLiteral(value) : value.ast) } };
+        }
+
+        return {
+            value,
+        }
+    }
+    return { withBlueprints };
 }
 
+export const math = impl<AnyMathExpr>(
+    {
+        add: true,
+        aggregate: true,
+        clamp: true,
+        combine: true,
+        div: true,
+        max: true,
+        min: true,
+        sub: true,
+        mix: true,
+        mod: true,
+        mult: true,
+        neg: true,
+        pow: true,
+        smoothstep: true,
+        step: true
+    })
+    .withBlueprints(<const>{
+        float: ['float'],
+        vec2: ['float', 'float'],
+        vec3: ['float', 'float', 'float'],
+        mat2: ['float', 'float', 'float', 'float'],
+        vec4: ['float', 'float', 'float', 'float'],
+        mat3: ['float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float'],
+        mat4: ['float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float'],
+    });
+
+math.value('float', 1.5);
+math.value('mat3', math.value('float', 1.5), 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5);
 
 // Living example.
 export function test() {
@@ -271,7 +275,24 @@ export function test() {
         [0, -1],
     ];
 
-    const block = codeblock()
+    function isMathType(x: any): x is MathTypes {
+        return x in mathTypeBlueprints;
+    }
+
+    function declareSingle<T extends any>(type: T, name: string) {
+        if (isMathType(type)) {
+            return { type, ast: { op: name, args: [] } };
+        }
+    }
+
+    function declare<T extends Record<string, string>>(variables: T): { [key in keyof T]: ReturnType<typeof declareSingle<key>> } {
+        // Take a record of variable names and types, and return a record of variable names and expressions.
+        return fromEntries(toEntries(variables).map(([key, type]) => [key, declareSingle])) as any;
+    }
+
+    const testDecl = declare(<const>{ testSampler: "sampler2D", b: "vec2" });
+
+    const block = codeblock(testDecl)
         .define(_ => mapObject(floatConstants, x => value('float', x)))
         .define($ => ({
             first: $.onePointFive.add($.two),
@@ -288,6 +309,8 @@ export function test() {
             vec4Example: value('vec4', $.first, $.second, $.second, value('float', 0)),
             mat2Example: value('mat2', $.first, $.second, $.onePointFive, $.lotsaMaths)
                 .matrixCompMult(value('mat2', $.first, $.second, $.onePointFive, $.lotsaMaths)),
+            nonExpr: { ast: <const>"hi", type: 'thinger' },
+            thinger: $.testSampler.tex2D(value('vec2', 0.5, 0.5)),
         }))
         .define($ => ({
             result: $.vec3Example.combine($.second).as('vec4')

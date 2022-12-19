@@ -1,17 +1,17 @@
 import { mapObject } from '../utils';
-import { CodeBlock, Expr, Types } from './codeBlock';
+import { CodeBlock, MathExpr, MathTypes } from './codeBlock';
 
 export class VertFrag<
-    Attributes extends Record<string, Types>,
-    Uniforms extends Record<string, Types>,
-    Returns extends Types,
+    Attributes extends Record<string, MathTypes>,
+    Uniforms extends Record<string, MathTypes>,
+    Returns extends MathTypes,
 >{
     code: string;
     constructor(
         attributes: Attributes,
         uniforms: Uniforms,
         declareBody: (body: CodeBlock<ExprRecord<Attributes> & ExprRecord<Uniforms>>) =>
-            CodeBlock<{ returns: Expr<Returns> }>
+            CodeBlock<{ returns: MathExpr<Returns> }>
     ) {
         const scope: ExprRecord<Attributes> & ExprRecord<Uniforms> = {
             ...mapObject(attributes, (value, key) => new Expr(value, key as string)) as ExprRecord<Attributes>,
@@ -27,7 +27,7 @@ export class VertFrag<
     }
 }
 
-type ExprRecord<T extends Record<string, Types>> = { [key in keyof T]: Expr<T[key]> };
+type ExprRecord<T extends Record<string, MathTypes>> = { [key in keyof T]: MathExpr<T[key]> };
 
 // Living example.
 

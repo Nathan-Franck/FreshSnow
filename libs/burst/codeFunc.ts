@@ -1,14 +1,14 @@
 import { fromEntries, mapObject, toEntries } from "../utils";
-import { CodeBlock, Expr, Types } from "./codeBlock";
+import { CodeBlock, MathExpr, MathTypes } from "./codeBlock";
 
-export class CodeFunc<Args extends Record<string, Types>, Returns extends Types>{
+export class CodeFunc<Args extends Record<string, MathTypes>, Returns extends MathTypes>{
     code: string;
     constructor(
         args: Args,
         
-        vert: (body: CodeBlock<{ [key in keyof Args]: Expr<Args[key]> }>) => CodeBlock<{ returns: Expr<Returns> }>
+        vert: (body: CodeBlock<{ [key in keyof Args]: MathExpr<Args[key]> }>) => CodeBlock<{ returns: MathExpr<Returns> }>
     ) {
-        const scope = mapObject(args, (value, key) => new Expr(value, key as string)) as { [key in keyof Args]: Expr<Args[key]> };
+        const scope = mapObject(args, (value, key) => new Expr(value, key as string)) as { [key in keyof Args]: MathExpr<Args[key]> };
         const body = declareBody(new CodeBlock(scope, ""));
         this.code = `void main(${
             Object.entries(args).map(([name, type]) => `${type} ${name}`).join(', ')
