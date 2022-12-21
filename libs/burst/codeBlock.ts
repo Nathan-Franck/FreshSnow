@@ -12,7 +12,7 @@ const mathTypeBlueprints = <const>{
 type MathTypeBlueprints = typeof mathTypeBlueprints;
 export type MathTypes = keyof typeof mathTypeBlueprints;
 
-type ExprType<T extends string> = { type: T };
+type ExprType<T extends string> = { type: T, ast: AST };
 
 const mathOps = <T extends MathTypes>(type: T) => <const>{
     add: {
@@ -143,7 +143,7 @@ export type MathExpr<T extends MathTypes> =
     & ExprValidOps<T>
     & ExprExtensionMethods<T>;
 
-type AnyMathExpr = { [T in MathTypes]: MathExpr<T> };
+const mathExprs: { [T in MathTypes]: MathExpr<T> } =mapObject(mathTypeBlueprints, (_, type) => mathOps(type)) as any;
 
 type AST = { op: string, args: AST[] } | { op: string, inner: AST } | { op: string, left: AST, right: AST } | AST[] | string;
 
@@ -210,8 +210,16 @@ function numberToFloatLiteral(value: number) {
     return string;
 }
 
-function impl<Exprs extends Record<string, any>>(allCallables: Record<keyof Exprs[keyof Exprs], true>) {
-    function withBlueprints<BP extends Record<keyof Exprs, readonly string[]>>(blueprints: BP) {
+type Input = {
+    first: { a: true, b: true },
+    second: { c: true, d: true },
+}
+
+function module<Exprs extends Record<string, any>>(exprs: Exprs) {
+    function withExprs<MoreExprs extends Record<string, any>>(moreExprs: MoreExprs) {
+        return module({ ...exprs, ...moreExprs });
+    }
+    function withBlueprints<BP extends Record<keyof Exprs, ReadonlyArray<keyof Exprs> | null>>(blueprints: BP) {
 
         type ConvertTuple<T> = T extends readonly [infer A, ...infer B]
             ? A extends string
@@ -220,36 +228,31 @@ function impl<Exprs extends Record<string, any>>(allCallables: Record<keyof Expr
             : readonly [ExprType<A>, ...ConvertTuple<B>]
             : [] : [];
 
-        function value<T extends keyof Exprs & string>(type: T, ...values: ConvertTuple<BP[T]>): ExprType<T> {
-            return { type, ast: { op: type, args: values.map(value => typeof value == 'number' ? numberToFloatLiteral(value) : value.ast) } };
+        function value<T extends keyof Exprs & string>(type: T, ...values: ConvertTuple<BP[T]>) {
+            return expr(type, { op: type, args: values.map(value => typeof value == 'number' ? numberToFloatLiteral(value) : value.ast) });
+        }
+
+        function expr<T extends keyof Exprs & string>(type: T, ast: AST): Exprs[T] & ExprType<T> {
+            return { ...fromEntries(toKeys(allCallables).map(key => type, ast };
         }
 
         return {
             value,
         }
     }
-    return { withBlueprints };
+    return { withExprs, withBlueprints };
 }
 
-export const math = impl<AnyMathExpr>(
-    {
-        add: true,
-        aggregate: true,
-        clamp: true,
-        combine: true,
-        div: true,
-        max: true,
-        min: true,
-        sub: true,
-        mix: true,
-        mod: true,
-        mult: true,
-        neg: true,
-        pow: true,
-        smoothstep: true,
-        step: true
-    })
+const shaderExprs = {
+    sampler2D: {
+        tex2D: (coord: ExprType<'vec2'>) => ExprType<'vec4'>;
+    },
+};
+
+export const math = module(mathExprs)
+    .withExprs(shaderExprs)
     .withBlueprints(<const>{
+        sampler2D: null,
         float: ['float'],
         vec2: ['float', 'float'],
         vec3: ['float', 'float', 'float'],
@@ -261,6 +264,7 @@ export const math = impl<AnyMathExpr>(
 
 math.value('float', 1.5);
 math.value('mat3', math.value('float', 1.5), 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5);
+math.value('sampler2D').tex2D(math.value('vec2', 1.5, 1.5));
 
 // Living example.
 export function test() {
