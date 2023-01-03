@@ -143,7 +143,7 @@ export type MathExpr<T extends MathTypes> =
     & ExprValidOps<T>
     & ExprExtensionMethods<T>;
 
-const mathExprs: { [T in MathTypes]: MathExpr<T> } =mapObject(mathTypeBlueprints, (_, type) => mathOps(type)) as any;
+const mathExprs: { [T in MathTypes]: MathExpr<T> } = mapObject(mathTypeBlueprints, (_, type) => mathOps(type)) as any;
 
 type AST = { op: string, args: AST[] } | { op: string, inner: AST } | { op: string, left: AST, right: AST } | AST[] | string;
 
@@ -245,7 +245,7 @@ function module<Exprs extends Record<string, any>>(exprs: Exprs) {
 
 const shaderExprs = {
     sampler2D: {
-        tex2D: (coord: ExprType<'vec2'>) => ExprType<'vec4'>;
+        tex2D: (coord: ExprType<'vec2'>) => 'vec4',
     },
 };
 
@@ -262,9 +262,12 @@ export const math = module(mathExprs)
         mat4: ['float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float'],
     });
 
-math.value('float', 1.5);
-math.value('mat3', math.value('float', 1.5), 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5);
-math.value('sampler2D').tex2D(math.value('vec2', 1.5, 1.5));
+const resultVec4 = math.value('float', 1.5)
+    .combine(math.value('vec3', 1.5, 1.5, 1.5)).as('vec4')
+math.value('mat3', math.value('float', 1.5), 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5)
+    .div(math.value('mat3', 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5));
+const result = math.value('sampler2D')
+    .tex2D(math.value('vec2', 1.5, 1.5));
 
 // Living example.
 export function test() {
